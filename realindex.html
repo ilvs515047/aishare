@@ -6,8 +6,8 @@
     <title>AI 總控中心 | Soul Mirror</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/face_detection.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
 
     <style>
         :root {
@@ -94,9 +94,10 @@
         }
 
         .status-text {
-            font-size: 1rem;
+            font-size: 1.2rem;
             color: rgba(255,255,255,0.3);
             letter-spacing: 5px;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -113,7 +114,7 @@
         <canvas id="output_canvas"></canvas>
         
         <div class="status-overlay">
-            <div class="status-text" id="status-display">INITIALIZING MULTI-CORE SYSTEM...</div>
+            <div class="status-text" id="status-display">INITIALIZING AI CORE...</div>
         </div>
     </div>
 
@@ -132,7 +133,7 @@
             canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.9)'; 
             canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-            // 檢查是否有偵測到人臉 (results.detections 是一個陣列，包含所有偵測到的人)
+            // 檢查是否有偵測到人臉
             if (results.detections && results.detections.length > 0) {
                 const count = results.detections.length;
                 statusDisplay.innerText = `${count} SOUL(S) DETECTED`;
@@ -145,14 +146,13 @@
                     // 取得邊界框 (Bounding Box)
                     const bbox = detection.locationData.relativeBoundingBox;
                     
-                    // 計算頭部中心點 (Box Center)
-                    // 這裡不使用平滑插值(Lerp)是因為多人對應 ID 比較複雜，
-                    // 但 FaceDetection 本身非常穩定，幾乎不會抖動。
+                    // 計算頭部中心點
                     const centerX = (bbox.xmin + bbox.width / 2) * canvasElement.width;
-                    const centerY = (bbox.ymin + bbox.height / 2) * canvasElement.height;
+                    // 將中心稍微上移一點，讓光暈看起來更像在頭部周圍
+                    const centerY = (bbox.ymin + bbox.height * 0.4) * canvasElement.height;
                     
-                    // 根據頭部大小調整光暈大小
-                    const size = (bbox.width * canvasElement.width) * 1.2; 
+                    // 根據頭部大小調整光暈大小，並放大一點做成光環
+                    const size = (bbox.width * canvasElement.width) * 1.5; 
 
                     drawSoulHalo(centerX, centerY, size);
                 }
@@ -166,15 +166,15 @@
 
         function drawSoulHalo(x, y, baseSize) {
             // 限制最大最小尺寸，避免太靠近鏡頭時過大
-            const radius = Math.max(50, Math.min(baseSize, 250));
+            const radius = Math.max(60, Math.min(baseSize, 300));
 
             // 1. 繪製核心光暈 (最強亮點)
             const gradient = canvasCtx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
             
             // 核心白光
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); 
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)'); 
             // 中層賽博藍
-            gradient.addColorStop(0.3, 'rgba(0, 243, 255, 0.6)'); 
+            gradient.addColorStop(0.3, 'rgba(0, 243, 255, 0.7)'); 
             // 外層紫色暈染
             gradient.addColorStop(0.7, 'rgba(188, 19, 254, 0.2)'); 
             // 邊緣透明
@@ -187,16 +187,19 @@
 
             // 2. 繪製外圍能量環 (增加科技感)
             canvasCtx.beginPath();
-            canvasCtx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
-            canvasCtx.strokeStyle = 'rgba(0, 243, 255, 0.6)';
-            canvasCtx.lineWidth = 2;
+            canvasCtx.arc(x, y, radius * 0.6, 0, Math.PI * 2);
+            canvasCtx.strokeStyle = 'rgba(0, 243, 255, 0.8)';
+            canvasCtx.lineWidth = 3;
             canvasCtx.stroke();
 
             // 3. 繪製隨機閃爍粒子 (增加靈動感)
-            for(let i=0; i<3; i++) {
-                const px = x + (Math.random() - 0.5) * radius;
-                const py = y + (Math.random() - 0.5) * radius;
-                const pSize = Math.random() * 3;
+            for(let i=0; i<4; i++) {
+                // 粒子在光暈範圍內隨機分布
+                const angle = Math.random() * Math.PI * 2;
+                const dist = Math.random() * radius * 0.8;
+                const px = x + Math.cos(angle) * dist;
+                const py = y + Math.sin(angle) * dist;
+                const pSize = Math.random() * 4 + 1;
                 
                 canvasCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#fff';
                 canvasCtx.beginPath();
@@ -206,8 +209,9 @@
         }
 
         // 初始化 Face Detection
+        // ⚠️ 關鍵修正：這裡明確指定載入檔案的路徑使用 @0.4 版本
         const faceDetection = new FaceDetection({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/${file}`;
         }});
         
         faceDetection.setOptions({
