@@ -263,20 +263,19 @@
         </header>
 
         <section class="project-section">
-            <h2 class="section-title">01. 台車點檢系統 (Web App)</h2>
+            <h2 class="section-title">01. 多層圓心偏移率檢測 (Web App)</h2>
             <div class="card">
                 <div class="card-content">
                     <h3>Pushcart Inspection System</h3>
-                    <p>利用 HTML5 與 QR Code 技術，解決傳統紙本點檢的效率與保存問題。實現即時資料庫串接與視覺化管理。</p>
+                    <p>利用圖像邊緣計算與擬合套圓算法，計算出各個圓的中心位置偏移率。</p>
                     <ul>
-                        <li><strong>架構：</strong> GitHub Pages 託管前端 + Google Sheets 作為後端資料庫 (GAS)。</li>
-                        <li><strong>特點：</strong> 免安裝 APP (Web-based)、0.1秒極速掃描、紅綠燈號視覺化提示。</li>
-                        <li><strong>效益：</strong> 點檢資料結構化，維護單位可即時查詢維修部位，工安人員可快速複查稽核。</li>
+                        <li><strong>架構：</strong> 在桌面端使用影像串流捕捉，找出擬合的圓心進行計算。</li>
+                        <li><strong>特點：</strong> 可依照現場的環境、使用模式進行調整。</li>
+                        <li><strong>效益：</strong> 現場人員遇到無法判斷的孔偏，可由機器介入進行輔助。</li>
                     </ul>
                     <div class="tech-tags">
-                        <span class="tag">HTML5</span>
-                        <span class="tag">Google Apps Script</span>
-                        <span class="tag">QR Code Scanner</span>
+                        <span class="tag">Python</span>
+                        <span class="tag">Sobel</span>
                     </div>
                 </div>
                 <div class="card-visual">
