@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網路通訊原理：全方位互動指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f5f5f4; /* stone-100 */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .layer-btn.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+            border-color: #0ea5e9;
+            transform: translateX(10px);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Journey & Hardware Animation Classes */
+        .packet {
+            transition: all 1s ease-in-out;
+        }
+        .connection-line {
+            transition: width 1s linear;
+        }
+        .device-card {
+            transition: all 0.3s ease;
+        }
+        .device-card.selected {
+            border-color: #0ea5e9;
+            background-color: #f0f9ff;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .topo-line {
+            position: absolute;
+            background-color: #d6d3d1;
+            z-index: 0;
+            transition: background-color 0.5s;
+        }
+        .topo-line.active {
+            background-color: #0ea5e9;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e7e5e4; }
+        ::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #78716c; }
+    </style>
+    <!-- 
+       Updated Palette & Structure:
+       - Added "Hardware" Tab.
+       - Integrated Hardware Topology Visualizer.
+       - Added logic for Hardware selection and info display.
+    -->
+</head>
+<body class="text-stone-800 flex flex-col min-h-screen">
+
+    <!-- Header Section -->
+    <header class="bg-white shadow-sm sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 space-y-4 md:space-y-0">
+                <div>
+                    <h1 class="text-2xl font-bold text-stone-800">網路通訊原理 <span class="text-sky-500">互動實驗室</span></h1>
+                    <p class="text-sm text-stone-500">從 OSI 模型、硬體設備到數據傳輸實戰</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2">
+                    <button onclick="switchTab('osi')" id="tab-btn-osi" class="px-4 py-2 rounded-lg text-sm font-bold bg-sky-500 text-white shadow-sm transition-all">
+                        📚 OSI 模型
+                    </button>
+                    <button onclick="switchTab('hardware')" id="tab-btn-hardware" class="px-4 py-2 rounded-lg text-sm font-bold bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-all">
+                        🛠️ 硬體設備
+                    </button>
+                    <button onclick="switchTab('journey')" id="tab-btn-journey" class="px-4 py-2 rounded-lg text-sm font-bold bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-all">
+                        🚚 數據旅程
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+
+        <!-- TAB 1: OSI Model Explorer -->
+        <div id="tab-osi" class="space-y-12 fade-in">
+            <!-- Intro Text -->
+            <section class="max-w-3xl mx-auto text-center">
+                <h2 class="text-xl font-semibold mb-3">網路通訊的通用語言</h2>
+                <p class="text-stone-600 leading-relaxed">
+                    OSI (Open Systems Interconnection) 模型是理解網路運作的基石。點擊左側層級，深入了解每一層如何在「跨國公司寄送機密文件」的比喻中運作。
+                </p>
+            </section>
+
+            <!-- Core Interaction: The OSI Stack Explorer -->
+            <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-[600px]">
+                <!-- Left: Navigation (The Stack) -->
+                <div class="lg:col-span-4 flex flex-col space-y-2">
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-stone-200 mb-4">
+                        <h3 class="font-bold text-stone-700 mb-2">OSI 模型層級</h3>
+                        <p class="text-xs text-stone-500">點擊層級查看詳情。</p>
+                    </div>
+                    <div id="layer-nav-container" class="space-y-2"></div>
+                    <div class="mt-4 bg-stone-100 p-4 rounded-lg border border-stone-200">
+                        <h4 class="font-bold text-sm text-stone-600 mb-2">記憶口訣 (L7 → L1)</h4>
+                        <p class="text-sky-600 font-medium italic text-sm">"All People Seem To Need Data Processing"</p>
+                    </div>
+                </div>
+
+                <!-- Right: Content Display -->
+                <div class="lg:col-span-8">
+                    <div id="content-panel" class="bg-white rounded-xl shadow-lg border border-stone-100 h-full p-6 relative overflow-hidden flex flex-col">
+                        <div id="default-view" class="flex flex-col items-center justify-center h-full text-center space-y-6">
+                            <div class="text-6xl text-sky-200">🌐</div>
+                            <h3 class="text-2xl font-bold text-stone-700">準備好開始探索了嗎？</h3>
+                            <p class="text-stone-500 max-w-md">請點擊左側的 <span class="font-bold text-sky-500">第 7 層</span> 開始探索。</p>
+                        </div>
+                        <div id="detail-view" class="hidden fade-in flex-col h-full">
+                            <div class="flex items-center justify-between mb-6 pb-4 border-b border-stone-100">
+                                <div>
+                                    <span id="layer-number" class="text-sm font-bold text-sky-500 tracking-wider uppercase">Layer 7</span>
+                                    <h2 id="layer-title" class="text-3xl font-bold text-stone-800">應用層</h2>
+                                    <h3 id="layer-eng" class="text-sm text-stone-400 font-mono">Application Layer</h3>
+                                </div>
+                                <div class="text-right hidden sm:block">
+                                    <span class="block text-xs text-stone-400">數據單位</span>
+                                    <span id="pdu-name" class="font-bold text-stone-600">Data (數據)</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 flex-grow">
+                                <div class="bg-stone-50 p-5 rounded-lg border border-stone-100">
+                                    <h4 class="font-bold text-stone-700 mb-3 flex items-center"><span class="mr-2">⚙️</span> 核心功能</h4>
+                                    <p id="layer-func" class="text-stone-600 text-sm leading-relaxed"></p>
+                                </div>
+                                <div class="bg-sky-50 p-5 rounded-lg border border-sky-100">
+                                    <h4 class="font-bold text-sky-800 mb-3 flex items-center"><span class="mr-2">🏢</span> 辦公室情境</h4>
+                                    <p id="layer-scenario" class="text-sky-900 text-sm leading-relaxed"></p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div class="bg-white border border-stone-200 p-4 rounded-lg">
+                                    <h5 class="text-xs font-bold text-stone-400 uppercase mb-2">關鍵協定</h5>
+                                    <div id="layer-protocols" class="flex flex-wrap gap-2"></div>
+                                </div>
+                                <div class="bg-white border border-stone-200 p-4 rounded-lg md:col-span-2">
+                                    <h5 class="text-xs font-bold text-stone-400 uppercase mb-2">硬體與關鍵字</h5>
+                                    <p id="layer-hardware" class="text-stone-700 text-sm"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Visualization Section -->
+            <section class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                <div class="flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-stone-800">數據特質分析</h3>
+                        <p class="text-sm text-stone-500">隨著層級變化，數據從「人類可讀」轉變為「機器訊號」。</p>
+                    </div>
+                    <div class="flex-grow flex items-center justify-center bg-stone-50 rounded-lg p-4">
+                        <div class="chart-container"><canvas id="layerChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-stone-800">數據的旅程：封裝與解封裝</h3>
+                        <p class="text-sm text-stone-500">模擬數據發送 (封裝) 與接收 (解封裝) 的過程。</p>
+                    </div>
+                    <div class="flex space-x-4 mb-4">
+                        <button id="btn-encap" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">⬇️ 發送數據 (封裝)</button>
+                        <button id="btn-decap" class="flex-1 bg-stone-500 hover:bg-stone-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">⬆️ 接收數據 (解封裝)</button>
+                    </div>
+                    <div id="journey-display" class="flex-grow bg-stone-50 rounded-lg p-6 border border-stone-200 overflow-hidden relative">
+                        <div id="packet-visual" class="flex flex-col items-center justify-center transition-all duration-500 w-full h-full space-y-1">
+                            <div class="text-stone-400 text-sm mb-2" id="journey-status">準備就緒...</div>
+                            <div id="packet-core" class="bg-amber-100 border-2 border-amber-300 text-amber-800 px-6 py-3 rounded shadow-sm w-3/4 text-center font-bold transition-all">原始數據 (Data)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- TAB 2: Hardware (New Content) -->
+        <div id="tab-hardware" class="hidden fade-in space-y-8">
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold text-stone-800 mb-2">網路三劍客：硬體圖鑑</h2>
+                <p class="text-stone-600">點擊下方的設備卡片，了解它們如何分工合作，將網路訊號一路送到你的電腦。</p>
+            </div>
+
+            <!-- Hardware Topology Visualizer -->
+            <div class="bg-white rounded-xl shadow-lg border border-stone-200 p-6">
+                <!-- Top Selector Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div id="card-modem" class="device-card cursor-pointer border-2 border-stone-100 rounded-xl p-4 flex items-center space-x-4 hover:border-sky-300" onclick="selectHardware('modem')">
+                        <div class="text-3xl bg-stone-100 p-3 rounded-full">🔌</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800">Modem 數據機</h3>
+                            <p class="text-xs text-stone-500">訊號翻譯員</p>
+                        </div>
+                    </div>
+                    <div id="card-router" class="device-card cursor-pointer border-2 border-stone-100 rounded-xl p-4 flex items-center space-x-4 hover:border-sky-300" onclick="selectHardware('router')">
+                        <div class="text-3xl bg-stone-100 p-3 rounded-full">📡</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800">Router 路由器</h3>
+                            <p class="text-xs text-stone-500">郵局指揮官</p>
+                        </div>
+                    </div>
+                    <div id="card-switch" class="device-card cursor-pointer border-2 border-stone-100 rounded-xl p-4 flex items-center space-x-4 hover:border-sky-300" onclick="selectHardware('switch')">
+                        <div class="text-3xl bg-stone-100 p-3 rounded-full">🔀</div>
+                        <div>
+                            <h3 class="font-bold text-stone-800">Switch 交換器</h3>
+                            <p class="text-xs text-stone-500">分機總機</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Topology Diagram -->
+                <div class="relative bg-stone-50 rounded-xl border border-stone-200 h-[300px] flex items-center justify-center overflow-hidden mb-6">
+                    
+                    <!-- Lines -->
+                    <div class="absolute top-1/2 left-0 w-full h-1 bg-stone-300 transform -translate-y-1/2 z-0"></div>
+                    
+                    <!-- Nodes -->
+                    <div class="relative z-10 flex justify-between w-full max-w-4xl px-8 items-center">
+                        <!-- Cloud -->
+                        <div class="flex flex-col items-center group">
+                            <div class="text-5xl mb-2 text-sky-200">☁️</div>
+                            <span class="text-xs font-bold text-stone-400">ISP 網際網路</span>
+                        </div>
+                        
+                        <!-- Modem Node -->
+                        <div id="node-modem" class="flex flex-col items-center transition-all duration-300 opacity-50">
+                            <div class="w-16 h-16 bg-white border-4 border-stone-300 rounded-lg flex items-center justify-center text-2xl shadow-sm">🔌</div>
+                            <span class="text-xs font-bold text-stone-500 mt-2 bg-white px-1">Modem</span>
+                        </div>
+
+                        <!-- Router Node -->
+                        <div id="node-router" class="flex flex-col items-center transition-all duration-300 opacity-50">
+                            <div class="w-16 h-16 bg-white border-4 border-stone-300 rounded-lg flex items-center justify-center text-2xl shadow-sm">📡</div>
+                            <span class="text-xs font-bold text-stone-500 mt-2 bg-white px-1">Router</span>
+                        </div>
+
+                        <!-- Switch Node -->
+                        <div id="node-switch" class="flex flex-col items-center transition-all duration-300 opacity-50">
+                            <div class="w-16 h-16 bg-white border-4 border-stone-300 rounded-lg flex items-center justify-center text-2xl shadow-sm">🔀</div>
+                            <span class="text-xs font-bold text-stone-500 mt-2 bg-white px-1">Switch</span>
+                        </div>
+
+                        <!-- Devices -->
+                        <div class="flex flex-col space-y-2">
+                            <div class="flex items-center space-x-2 opacity-50">
+                                <span class="text-2xl">💻</span>
+                                <span class="text-xs text-stone-400">PC 1</span>
+                            </div>
+                            <div class="flex items-center space-x-2 opacity-50">
+                                <span class="text-2xl">🖨️</span>
+                                <span class="text-xs text-stone-400">Printer</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div id="hardware-detail" class="bg-stone-50 p-6 rounded-lg border border-stone-200 min-h-[150px]">
+                    <div class="text-center text-stone-500 mt-4">
+                        請點擊上方的設備卡片，查看詳細運作原理。
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-stone-200 rounded-lg shadow-sm">
+                    <thead>
+                        <tr class="bg-stone-100 text-stone-600 text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">設備</th>
+                            <th class="py-3 px-6 text-left">OSI 層級</th>
+                            <th class="py-3 px-6 text-left">核心任務</th>
+                            <th class="py-3 px-6 text-left">一句話比喻</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-stone-600 text-sm font-light">
+                        <tr class="border-b border-stone-200 hover:bg-stone-50">
+                            <td class="py-3 px-6 text-left font-bold">Modem (數據機)</td>
+                            <td class="py-3 px-6 text-left"><span class="bg-stone-200 text-stone-600 py-1 px-3 rounded-full text-xs">L1 / L2</span></td>
+                            <td class="py-3 px-6 text-left">類比訊號 (電話線/光纖) ↔ 數位訊號</td>
+                            <td class="py-3 px-6 text-left">不懂內容的「翻譯員」</td>
+                        </tr>
+                        <tr class="border-b border-stone-200 hover:bg-stone-50">
+                            <td class="py-3 px-6 text-left font-bold">Switch (交換器)</td>
+                            <td class="py-3 px-6 text-left"><span class="bg-amber-100 text-amber-600 py-1 px-3 rounded-full text-xs">L2 資料連結層</span></td>
+                            <td class="py-3 px-6 text-left">透過 MAC 位址，在內網精準傳送資料</td>
+                            <td class="py-3 px-6 text-left">只管內線的「分機總機」</td>
+                        </tr>
+                        <tr class="border-b border-stone-200 hover:bg-stone-50">
+                            <td class="py-3 px-6 text-left font-bold">Router (路由器)</td>
+                            <td class="py-3 px-6 text-left"><span class="bg-sky-100 text-sky-600 py-1 px-3 rounded-full text-xs">L3 網路層</span></td>
+                            <td class="py-3 px-6 text-left">分配 IP，決定資料要出外網還是留內網</td>
+                            <td class="py-3 px-6 text-left">對外窗口的「指揮官」</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 3: The Journey Simulation -->
+        <div id="tab-journey" class="hidden fade-in space-y-8">
+            <!-- Context Header -->
+            <div class="text-center max-w-3xl mx-auto">
+                <h2 class="text-2xl font-bold text-stone-800 mb-2">當你在瀏覽器按下 Enter 後...</h2>
+                <p class="text-stone-600">這是一個互動模擬器，帶你經歷從輸入網址到網頁顯示的完整過程：<br>DNS 查詢 ➔ TCP 三向交握 ➔ HTTP 請求與回應。</p>
+            </div>
+
+            <!-- Simulation Controller -->
+            <div class="bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden">
+                <!-- Browser Bar -->
+                <div class="bg-stone-100 p-4 border-b border-stone-200 flex items-center space-x-3">
+                    <div class="flex space-x-1">
+                        <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <div class="flex-1 bg-white border border-stone-300 rounded-md px-3 py-1 text-sm text-stone-600 flex items-center justify-between">
+                        <span>https://<span class="text-stone-800 font-medium">www.example.com</span></span>
+                        <span class="text-stone-400 text-xs">🔒 Secure</span>
+                    </div>
+                    <button id="sim-start-btn" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-1.5 rounded text-sm font-bold transition-colors">
+                        Go ➔
+                    </button>
+                    <button id="sim-reset-btn" class="bg-stone-200 hover:bg-stone-300 text-stone-600 px-4 py-1.5 rounded text-sm font-bold transition-colors">
+                        Reset
+                    </button>
+                </div>
+
+                <!-- Stage Display -->
+                <div class="bg-stone-800 text-white px-6 py-2 flex justify-between items-center text-xs font-mono">
+                    <div id="sim-log">等待輸入...</div>
+                    <div id="sim-step-indicator" class="text-sky-400">Step 0/4</div>
+                </div>
+
+                <!-- Animation Stage -->
+                <div class="relative h-[400px] bg-stone-50 p-6 flex justify-between items-center select-none overflow-hidden" id="animation-stage">
+                    
+                    <!-- Background Lines -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+                         <div class="w-full h-0.5 bg-stone-900"></div>
+                    </div>
+
+                    <!-- Left: Client -->
+                    <div class="relative z-10 flex flex-col items-center w-1/4">
+                        <div class="text-5xl mb-2">💻</div>
+                        <div class="font-bold text-stone-700">Client (你)</div>
+                        <div class="text-xs text-stone-500 mt-1">192.168.1.5</div>
+                        <div id="client-screen" class="mt-4 w-32 h-20 bg-white border-2 border-stone-300 rounded flex items-center justify-center text-xs text-stone-400 shadow-sm overflow-hidden">
+                            (空白)
+                        </div>
+                    </div>
+
+                    <!-- Middle Top: DNS Server -->
+                    <div class="absolute top-6 left-1/2 transform -translate-x-1/2 z-10 flex flex-col items-center">
+                        <div class="text-4xl mb-1">🗄️</div>
+                        <div class="font-bold text-stone-600 text-sm">DNS Server</div>
+                        <div class="text-xs text-stone-400">8.8.8.8</div>
+                    </div>
+
+                    <!-- Right: Web Server -->
+                    <div class="relative z-10 flex flex-col items-center w-1/4">
+                        <div class="text-5xl mb-2">🏢</div>
+                        <div class="font-bold text-stone-700">Web Server</div>
+                        <div class="text-xs text-stone-500 mt-1">93.184.216.34</div>
+                        <div class="mt-4 w-32 h-20 bg-stone-200 border-2 border-stone-300 rounded flex items-center justify-center text-xs text-stone-500">
+                            index.html
+                        </div>
+                    </div>
+
+                    <!-- Moving Packet (Hidden by default) -->
+                    <div id="sim-packet" class="absolute w-12 h-8 bg-sky-500 rounded text-white text-[10px] flex items-center justify-center shadow-md font-bold z-20 opacity-0 transform -translate-x-1/2 -translate-y-1/2" style="top: 50%; left: 15%;">
+                        DATA
+                    </div>
+
+                    <!-- TCP Handshake Lines (Canvas Overlay) -->
+                     <div id="handshake-overlay" class="absolute inset-0 pointer-events-none flex flex-col items-center justify-center space-y-4 opacity-0 transition-opacity duration-500">
+                        <div class="flex items-center space-x-2 text-xs font-bold text-sky-600 bg-white px-2 py-1 rounded shadow"><span class="text-stone-400">1.</span> SYN ➔</div>
+                        <div class="flex items-center space-x-2 text-xs font-bold text-sky-600 bg-white px-2 py-1 rounded shadow"><span class="text-stone-400">2.</span> ⬅ SYN-ACK</div>
+                        <div class="flex items-center space-x-2 text-xs font-bold text-sky-600 bg-white px-2 py-1 rounded shadow"><span class="text-stone-400">3.</span> ACK ➔</div>
+                     </div>
+                </div>
+
+                <!-- Explanation Panel -->
+                <div class="bg-white border-t border-stone-200 p-6">
+                    <h3 class="font-bold text-stone-800 mb-2 flex items-center">
+                        <span id="step-title" class="mr-2">準備就緒</span>
+                    </h3>
+                    <p id="step-desc" class="text-sm text-stone-600 leading-relaxed">
+                        點擊上方的 "Go" 按鈕開始模擬。我們將觀察瀏覽器如何找到伺服器並下載網頁。
+                    </p>
+                    <div id="step-tech-details" class="mt-4 bg-stone-50 p-3 rounded text-xs font-mono text-stone-500 hidden">
+                        <!-- Technical details injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-stone-400 text-sm py-8 border-t border-stone-200 mt-12">
+            <p>基於 OSI 七層模型完全指南 | 網路通訊原理專題</p>
+        </footer>
+
+    </main>
+
+    <script>
+        // --- Shared Data & OSI Logic ---
+        const osiData = [
+            { id: 7, title: "應用層", eng: "Application Layer", pdu: "Data (數據)", func: "提供使用者操作的介面，讓軟體能存取網路服務。", scenario: "你 (CEO) 寫好信件內容，並叫秘書來處理。你只在乎「我要寄信」，不在此乎信怎麼送。", protocols: ["HTTP", "FTP", "SMTP", "DNS"], hardware: "電腦主機、手機、伺服器 (User Interface)", keywords: "使用者介面" },
+            { id: 6, title: "表現層", eng: "Presentation Layer", pdu: "Data (數據)", func: "負責數據的翻譯、加密與壓縮。確保對方看得懂我們傳的東西。", scenario: "秘書發現信是中文的，翻譯成英文；為安全加密成密碼文；為省紙把字寫小 (壓縮)。", protocols: ["SSL/TLS", "JPEG", "ASCII"], hardware: "作業系統、驅動程式", keywords: "編碼、加密、壓縮" },
+            { id: 5, title: "會談層", eng: "Session Layer", pdu: "Data (數據)", func: "建立、管理並終止兩端應用程式之間的對話 (Session)。", scenario: "秘書打電話給對方的秘書：「喂？我們要開始傳文件囉」確認雙方都在線上，並在結束後掛斷。", protocols: ["RPC", "NetBIOS"], hardware: "閘道器 (Gateway)", keywords: "對話控制 (Dialog Control)" },
+            { id: 4, title: "傳輸層", eng: "Transport Layer", pdu: "Segment (區段)", func: "確保數據完整傳送，決定要「可靠傳送」(TCP) 還是「快速傳送」(UDP)。將大數據切成小段。", scenario: "物流經理決定用「掛號信」(TCP) 或「平信」(UDP)。並在信封標註連接埠 (Port) 以區分部門。", protocols: ["TCP (可靠)", "UDP (快速)"], hardware: "防火牆, 負載平衡器", keywords: "連接埠 (Port), 可靠性" },
+            { id: 3, title: "網路層", eng: "Network Layer", pdu: "Packet (封包)", func: "負責地址定址 (Addressing) 和路徑選擇 (Routing)。", scenario: "郵件中心工作人員在信封貼上 IP 位址 (收件人地址)。查看地圖，決定走哪條路線 (路由) 最快。", protocols: ["IP", "ICMP", "ARP"], hardware: "路由器 (Router)", keywords: "IP 位址, 路由路徑" },
+            { id: 2, title: "資料連結層", eng: "Data Link Layer", pdu: "Frame (訊框)", func: "確保在相鄰的兩個節點之間可靠傳輸。使用 MAC 位址 (實體地址)。", scenario: "卡車司機不需要知道最終目的地，只需要知道下一站是哪裡。看車牌號碼 (MAC Address) 確認下一站。", protocols: ["Ethernet", "Wi-Fi (802.11)"], hardware: "交換器 (Switch), 網卡", keywords: "MAC 位址, 節點對節點" },
+            { id: 1, title: "實體層", eng: "Physical Layer", pdu: "Bit (位元)", func: "透過物理媒介傳送原始的位元流 (0 和 1)。", scenario: "運送信件的高速公路、海底電纜。這裡只有電壓的高低、光的閃爍，沒有任何意義，只有 0 和 1。", protocols: ["RS-232", "DSL"], hardware: "網路線, 光纖, 集線器 (Hub)", keywords: "電纜, 訊號, 0/1" }
+        ];
+
+        let currentLayerId = null;
+        let chartInstance = null;
+
+        // --- DOM Elements ---
+        const navContainer = document.getElementById('layer-nav-container');
+        const defaultView = document.getElementById('default-view');
+        const detailView = document.getElementById('detail-view');
+
+        // --- Initialization ---
+        function init() {
+            renderNav();
+            initChart();
+            setupEncapsulationDemo();
+            setupJourneySimulation();
+        }
+
+        // --- Logic: Tab Switching ---
+        window.switchTab = function(tabName) {
+            const tabs = ['osi', 'hardware', 'journey'];
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabName) {
+                    el.classList.remove('hidden');
+                    btn.classList.remove('bg-white', 'text-stone-600', 'border', 'border-stone-200');
+                    btn.classList.add('bg-sky-500', 'text-white');
+                } else {
+                    el.classList.add('hidden');
+                    btn.classList.remove('bg-sky-500', 'text-white');
+                    btn.classList.add('bg-white', 'text-stone-600', 'border', 'border-stone-200');
+                }
+            });
+        };
+
+        // --- Logic: OSI Render & Chart ---
+        function renderNav() {
+            navContainer.innerHTML = '';
+            osiData.forEach(layer => {
+                const btn = document.createElement('button');
+                btn.className = `layer-btn w-full text-left px-4 py-3 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 transition-all duration-200 flex items-center justify-between group`;
+                btn.onclick = () => selectLayer(layer.id);
+                btn.innerHTML = `
+                    <div>
+                        <span class="inline-block w-6 h-6 rounded bg-stone-100 text-stone-500 text-xs font-bold text-center leading-6 mr-3 group-hover:bg-sky-100 group-hover:text-sky-600 transition-colors">${layer.id}</span>
+                        <span class="font-medium text-stone-700 group-hover:text-sky-700 transition-colors">${layer.title}</span>
+                    </div>
+                    <span class="text-xs text-stone-400 group-hover:text-stone-500">${layer.eng.split(' ')[0]}</span>
+                `;
+                btn.id = `btn-layer-${layer.id}`;
+                navContainer.appendChild(btn);
+            });
+        }
+
+        function selectLayer(id) {
+            currentLayerId = id;
+            document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active', 'ring-2', 'ring-sky-500', 'ring-opacity-50'));
+            const activeBtn = document.getElementById(`btn-layer-${id}`);
+            if (activeBtn) activeBtn.classList.add('active', 'ring-2', 'ring-sky-500', 'ring-opacity-50');
+
+            const data = osiData.find(d => d.id === id);
+            defaultView.classList.add('hidden');
+            detailView.classList.remove('hidden');
+            detailView.classList.remove('fade-in');
+            void detailView.offsetWidth; 
+            detailView.classList.add('fade-in');
+
+            document.getElementById('layer-number').textContent = `Layer ${data.id}`;
+            document.getElementById('layer-title').textContent = data.title;
+            document.getElementById('layer-eng').textContent = data.eng;
+            document.getElementById('pdu-name').textContent = data.pdu;
+            document.getElementById('layer-func').textContent = data.func;
+            document.getElementById('layer-scenario').textContent = data.scenario;
+            document.getElementById('layer-hardware').textContent = `${data.hardware}。 關鍵字：${data.keywords}`;
+
+            const protoContainer = document.getElementById('layer-protocols');
+            protoContainer.innerHTML = '';
+            data.protocols.forEach(p => {
+                const tag = document.createElement('span');
+                tag.className = 'bg-stone-100 text-stone-600 text-xs px-2 py-1 rounded border border-stone-200';
+                tag.textContent = p;
+                protoContainer.appendChild(tag);
+            });
+            updateChartHighlight(id);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('layerChart').getContext('2d');
+            const labels = osiData.map(d => `L${d.id}`);
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '人類可讀性 (邏輯)', data: [90, 80, 70, 50, 30, 10, 0], backgroundColor: 'rgba(14, 165, 233, 0.6)', borderColor: 'rgba(14, 165, 233, 1)', borderWidth: 1 },
+                        { label: '硬體依賴度 (物理)', data: [10, 20, 30, 50, 70, 90, 100], backgroundColor: 'rgba(168, 162, 158, 0.6)', borderColor: 'rgba(168, 162, 158, 1)', borderWidth: 1 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { title: (context) => osiData.find(d => d.id == context[0].label.replace('L', '')).title } } }, scales: { x: { beginAtZero: true, max: 100, grid: { display: false } }, y: { grid: { display: false } } } }
+            });
+        }
+
+        function updateChartHighlight(activeId) {
+            if(!chartInstance) return;
+            const newColors = osiData.map(d => d.id === activeId ? 'rgba(14, 165, 233, 1)' : 'rgba(14, 165, 233, 0.3)');
+            chartInstance.data.datasets[0].backgroundColor = newColors;
+            chartInstance.update();
+        }
+
+        // --- Logic: Encapsulation Demo (OSI) ---
+        function setupEncapsulationDemo() {
+            const btnEncap = document.getElementById('btn-encap');
+            const btnDecap = document.getElementById('btn-decap');
+            const container = document.getElementById('packet-visual');
+            const colors = ['#0c4a6e', '#075985', '#0369a1', '#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc'];
+
+            btnEncap.onclick = async () => {
+                container.innerHTML = `<div class="text-stone-400 text-sm mb-2" id="journey-status">準備發送...</div><div id="packet-core" class="bg-amber-100 border-2 border-amber-300 text-amber-800 px-6 py-3 rounded shadow-sm w-3/4 text-center font-bold z-10">原始數據 (Data)</div>`;
+                for (let i = 7; i >= 1; i--) {
+                    document.getElementById('journey-status').innerText = `正在經過 L${i} ${osiData.find(d=>d.id===i).title}... 加上表頭`;
+                    const headerHtml = document.createElement('div');
+                    headerHtml.className = `w-full text-center text-xs text-white py-1 rounded shadow-sm mt-1 border-b border-white/20`;
+                    headerHtml.style.backgroundColor = colors[7-i];
+                    headerHtml.style.width = '100%';
+                    headerHtml.innerText = `L${i} Header`;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = "p-2 rounded border-2 border-dashed border-stone-300 w-full flex flex-col items-center mt-2 fade-in";
+                    wrapper.style.borderColor = colors[7-i];
+                    while (container.childNodes.length > 2) wrapper.appendChild(container.lastChild);
+                    wrapper.insertBefore(headerHtml, wrapper.firstChild);
+                    container.appendChild(wrapper);
+                    await new Promise(r => setTimeout(r, 600));
+                }
+                document.getElementById('journey-status').innerText = "封裝完成！準備透過 L1 物理層發送訊號";
+            };
+
+            btnDecap.onclick = async () => {
+                if (container.children.length < 3) { document.getElementById('journey-status').innerText = "請先執行「發送數據」！"; return; }
+                for (let i = 1; i <= 7; i++) {
+                     const wrapper = container.lastElementChild;
+                     if (wrapper && wrapper.id !== 'journey-status') {
+                        document.getElementById('journey-status').innerText = `正在經過 L${i} ${osiData.find(d=>d.id===i).title}... 拆除表頭`;
+                        wrapper.style.backgroundColor = "#fee2e2"; 
+                        await new Promise(r => setTimeout(r, 400));
+                        const header = wrapper.firstElementChild;
+                        header.style.display = 'none'; 
+                        const innerContent = wrapper.lastElementChild; 
+                        if (innerContent) { container.removeChild(wrapper); container.appendChild(innerContent); } 
+                        else { container.innerHTML = `<div class="text-stone-400 text-sm mb-2" id="journey-status">解封裝完成！讀取數據。</div><div id="packet-core" class="bg-green-100 border-2 border-green-500 text-green-800 px-6 py-3 rounded shadow-sm w-3/4 text-center font-bold text-xl scale-110 transition-transform">原始數據 (Data)</div>`; return; }
+                        await new Promise(r => setTimeout(r, 600));
+                     }
+                }
+            };
+        }
+
+        // --- Logic: Hardware Interaction (New) ---
+        window.selectHardware = function(type) {
+            // 1. Reset Styles
+            document.querySelectorAll('.device-card').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('[id^="node-"]').forEach(el => {
+                el.classList.remove('scale-110', 'opacity-100');
+                el.classList.add('opacity-50');
+                el.querySelector('div').classList.remove('border-sky-500', 'bg-sky-50');
+                el.querySelector('div').classList.add('border-stone-300', 'bg-white');
+            });
+
+            // 2. Select Current
+            document.getElementById(`card-${type}`).classList.add('selected');
+            const activeNode = document.getElementById(`node-${type}`);
+            activeNode.classList.remove('opacity-50');
+            activeNode.classList.add('scale-110', 'opacity-100');
+            
+            const nodeIcon = activeNode.querySelector('div');
+            nodeIcon.classList.remove('border-stone-300', 'bg-white');
+            nodeIcon.classList.add('border-sky-500', 'bg-sky-50');
+
+            // 3. Update Detail Text
+            const detailPanel = document.getElementById('hardware-detail');
+            let content = '';
+            
+            if (type === 'modem') {
+                content = `
+                    <h3 class="font-bold text-lg text-stone-800 mb-2">Modem (調變解調器)</h3>
+                    <p class="text-sm text-stone-600 mb-4">你的網路訊號可能來自電話線 (DSL) 或光纖。這些是「類比訊號」(光波或聲波)。但你的電腦只看得懂「數位訊號」(0 和 1)。Modem 的工作就是進行這個轉換。</p>
+                    <div class="flex items-center space-x-4 bg-white p-3 rounded border border-stone-200">
+                        <span class="text-xs bg-stone-200 px-2 py-1 rounded">運作層級</span>
+                        <span class="font-bold text-sm text-sky-600">Layer 1 實體層 / Layer 2 資料連結層</span>
+                    </div>
+                `;
+            } else if (type === 'router') {
+                content = `
+                    <h3 class="font-bold text-lg text-stone-800 mb-2">Router (路由器)</h3>
+                    <p class="text-sm text-stone-600 mb-4">它是你家的「大門」。它有兩個重要功能：<br>1. **NAT (網路位址轉換)**：把你家裡所有設備 (手機、筆電) 的私有 IP 轉換成一個公有 IP 上網。<br>2. **DHCP**：自動發放 IP 地址給連上來的設備。</p>
+                    <div class="flex items-center space-x-4 bg-white p-3 rounded border border-stone-200">
+                        <span class="text-xs bg-stone-200 px-2 py-1 rounded">運作層級</span>
+                        <span class="font-bold text-sm text-sky-600">Layer 3 網路層</span>
+                    </div>
+                `;
+            } else if (type === 'switch') {
+                content = `
+                    <h3 class="font-bold text-lg text-stone-800 mb-2">Switch (交換器)</h3>
+                    <p class="text-sm text-stone-600 mb-4">Router 只有幾個孔，如果不夠用怎麼辦？Switch 就像延長線，但它更聰明。它會記住每個孔對應的設備 MAC 地址。當電腦 A 要傳檔給電腦 B 時，Switch 會建立專屬通道，不會讓資料跑到電腦 C 去。</p>
+                    <div class="flex items-center space-x-4 bg-white p-3 rounded border border-stone-200">
+                        <span class="text-xs bg-stone-200 px-2 py-1 rounded">運作層級</span>
+                        <span class="font-bold text-sm text-sky-600">Layer 2 資料連結層</span>
+                    </div>
+                `;
+            }
+            detailPanel.innerHTML = content;
+        }
+
+        // --- Logic: Journey Simulation ---
+        function setupJourneySimulation() {
+            const btnStart = document.getElementById('sim-start-btn');
+            const btnReset = document.getElementById('sim-reset-btn');
+            const log = document.getElementById('sim-log');
+            const stepIndicator = document.getElementById('sim-step-indicator');
+            const packet = document.getElementById('sim-packet');
+            const clientScreen = document.getElementById('client-screen');
+            const handshakeOverlay = document.getElementById('handshake-overlay');
+            const stepTitle = document.getElementById('step-title');
+            const stepDesc = document.getElementById('step-desc');
+            const techDetails = document.getElementById('step-tech-details');
+
+            let isRunning = false;
+            const pos = { client: { top: '50%', left: '15%' }, dns: { top: '15%', left: '50%' }, server: { top: '50%', left: '85%' } };
+
+            function resetSim() {
+                isRunning = false;
+                log.innerText = "等待輸入...";
+                stepIndicator.innerText = "Step 0/4";
+                packet.style.opacity = '0';
+                packet.style.top = pos.client.top;
+                packet.style.left = pos.client.left;
+                clientScreen.innerHTML = "(空白)";
+                clientScreen.classList.remove('bg-white');
+                clientScreen.classList.add('bg-white');
+                handshakeOverlay.style.opacity = '0';
+                stepTitle.innerText = "準備就緒";
+                stepDesc.innerText = "點擊上方的 \"Go\" 按鈕開始模擬。";
+                techDetails.classList.add('hidden');
+                btnStart.disabled = false;
+                btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            btnReset.onclick = resetSim;
+
+            btnStart.onclick = async () => {
+                if (isRunning) return;
+                isRunning = true;
+                btnStart.disabled = true;
+                btnStart.classList.add('opacity-50', 'cursor-not-allowed');
+
+                // STEP 1: DNS Lookup
+                stepIndicator.innerText = "Step 1/4";
+                log.innerText = "查詢 DNS: www.example.com 在哪？";
+                stepTitle.innerText = "步驟 1: DNS 查詢";
+                stepDesc.innerText = "瀏覽器首先檢查快取，如果沒有，就會發送 UDP 封包給 DNS 伺服器，詢問網址對應的 IP 地址。";
+                techDetails.innerHTML = "Protocol: UDP | Port: 53 | Query: A Record www.example.com";
+                techDetails.classList.remove('hidden');
+
+                packet.innerText = "DNS?";
+                packet.style.backgroundColor = "#f59e0b"; // amber for DNS
+                packet.style.opacity = '1';
+                
+                await movePacket(pos.client, pos.dns, 1000);
+                await wait(500);
+                
+                log.innerText = "DNS 回應: IP 是 93.184.216.34";
+                packet.innerText = "IP:93..";
+                
+                await movePacket(pos.dns, pos.client, 1000);
+                await wait(500);
+
+                // STEP 2: TCP Handshake
+                stepIndicator.innerText = "Step 2/4";
+                log.innerText = "建立 TCP 連線 (三向交握)";
+                stepTitle.innerText = "步驟 2: TCP 三向交握";
+                stepDesc.innerText = "拿到 IP 後，瀏覽器與 Web 伺服器建立可靠連線。透過「SYN, SYN-ACK, ACK」三次確認。";
+                techDetails.innerHTML = "Protocol: TCP | Port: 80/443 | Flags: SYN, SYN-ACK, ACK";
+                
+                packet.style.opacity = '0'; 
+                handshakeOverlay.style.opacity = '1';
+                await wait(2000);
+                handshakeOverlay.style.opacity = '0';
+                log.innerText = "連線建立成功！";
+                await wait(500);
+
+                // STEP 3: HTTP Request
+                stepIndicator.innerText = "Step 3/4";
+                log.innerText = "發送 HTTP 請求: GET /index.html";
+                stepTitle.innerText = "步驟 3: 發送 HTTP 請求";
+                stepDesc.innerText = "連線建立後，瀏覽器發送請求：「請給我首頁的內容」。";
+                techDetails.innerHTML = "Method: GET | Path: / | Protocol: HTTP/1.1";
+                
+                packet.innerText = "GET /";
+                packet.style.backgroundColor = "#0ea5e9"; // Sky blue for HTTP
+                packet.style.opacity = '1';
+                
+                await movePacket(pos.client, pos.server, 1200);
+                await wait(500);
+
+                log.innerText = "伺服器處理中...";
+                packet.style.opacity = '0';
+                await wait(800);
+
+                // STEP 4: HTTP Response & Render
+                stepIndicator.innerText = "Step 4/4";
+                log.innerText = "收到 HTTP 回應: 200 OK";
+                stepTitle.innerText = "步驟 4: 接收與渲染";
+                stepDesc.innerText = "伺服器回傳 HTML 代碼。瀏覽器解析代碼，並將畫面畫出來。";
+                techDetails.innerHTML = "Status: 200 OK | Content-Type: text/html";
+                
+                packet.innerText = "HTML";
+                packet.style.backgroundColor = "#10b981"; // Green for Success
+                packet.style.opacity = '1';
+
+                await movePacket(pos.server, pos.client, 1200);
+                
+                packet.style.opacity = '0';
+                log.innerText = "渲染網頁完成！";
+                
+                clientScreen.innerHTML = `<div class="text-center"><div class="text-2xl">😊</div><div class="font-bold text-stone-800">Hello!</div></div>`;
+                clientScreen.classList.remove('bg-white');
+                clientScreen.classList.add('bg-sky-50');
+                
+                isRunning = false;
+                btnStart.disabled = false;
+                btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+            };
+
+            function movePacket(from, to, duration) {
+                return new Promise(resolve => {
+                    packet.style.transition = `top ${duration}ms ease-in-out, left ${duration}ms ease-in-out`;
+                    packet.style.top = to.top;
+                    packet.style.left = to.left;
+                    setTimeout(resolve, duration);
+                });
+            }
+
+            function wait(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
