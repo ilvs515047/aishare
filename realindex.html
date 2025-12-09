@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 總控中心 | Soul Mirror</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <style>
@@ -18,13 +19,13 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background-color: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; }
 
-        /* === 1. 頂部極簡大標籤 (直接連結) === */
+        /* === 1. 頂部極簡大標籤 === */
         .top-nav {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 150px; /* 增加高度讓按鈕更顯眼 */
+            height: 150px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -33,7 +34,6 @@
             background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
         }
 
-        /* 按鈕樣式 */
         .nav-link {
             text-decoration: none;
             background: rgba(10, 10, 10, 0.7);
@@ -44,7 +44,6 @@
             font-weight: 800;
             letter-spacing: 3px;
             text-transform: uppercase;
-            /* 科幻切角造型 */
             clip-path: polygon(15% 0, 100% 0, 100% 70%, 85% 100%, 0 100%, 0 30%);
             transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             backdrop-filter: blur(10px);
@@ -53,20 +52,6 @@
             gap: 15px;
             position: relative;
             overflow: hidden;
-        }
-
-        /* 發光特效 */
-        .nav-link::before {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%;
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: 0.5s;
-        }
-
-        .nav-link:hover::before {
-            left: 100%;
         }
 
         .nav-link:hover {
@@ -99,7 +84,6 @@
             transform: scaleX(-1); /* 鏡像翻轉 */
         }
 
-        /* 底部狀態字 */
         .status-overlay {
             position: absolute;
             bottom: 40px;
@@ -113,10 +97,7 @@
             font-size: 1rem;
             color: rgba(255,255,255,0.3);
             letter-spacing: 5px;
-            animation: pulse 2s infinite;
         }
-
-        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.8; } 100% { opacity: 0.3; } }
     </style>
 </head>
 <body>
@@ -132,7 +113,7 @@
         <canvas id="output_canvas"></canvas>
         
         <div class="status-overlay">
-            <div class="status-text" id="status-display">INITIALIZING AI CORE...</div>
+            <div class="status-text" id="status-display">INITIALIZING MULTI-CORE SYSTEM...</div>
         </div>
     </div>
 
@@ -142,115 +123,102 @@
         const canvasCtx = canvasElement.getContext('2d');
         const statusDisplay = document.getElementById('status-display');
 
-        // 平滑移動變數
-        let soulX = 0;
-        let soulY = 0;
-        let targetX = 0;
-        let targetY = 0;
-        const smoothFactor = 0.1; // 數值越小越平滑，但也越慢 (0.05 ~ 0.2 推薦)
-
-        // 線性插值函數 (讓移動變平滑的關鍵)
-        function lerp(start, end, amt) {
-            return (1 - amt) * start + amt * end;
-        }
-
         function onResults(results) {
             // 設定畫布尺寸
             canvasElement.width = window.innerWidth;
             canvasElement.height = window.innerHeight;
 
-            // 清除畫布 (畫一個半透明黑色背景，製造一點點殘影效果，但不需要太強)
-            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.9)'; // 若要看到真實攝影機畫面，改為 rgba(0,0,0,0)
+            // 清除畫布
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.9)'; 
             canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-            if (results.poseLandmarks) {
-                statusDisplay.innerText = "SOUL LINKED";
+            // 檢查是否有偵測到人臉 (results.detections 是一個陣列，包含所有偵測到的人)
+            if (results.detections && results.detections.length > 0) {
+                const count = results.detections.length;
+                statusDisplay.innerText = `${count} SOUL(S) DETECTED`;
                 statusDisplay.style.color = "var(--primary)";
+                statusDisplay.style.textShadow = "0 0 10px var(--primary)";
 
-                // 取得鼻子座標 (Landmark 0) 作為頭部中心
-                const nose = results.poseLandmarks[0];
-                
-                // 轉換為畫布座標
-                let rawX = nose.x * canvasElement.width;
-                let rawY = nose.y * canvasElement.height;
+                // === 迴圈：為「每一個」偵測到的人繪製靈魂 ===
+                for (const detection of results.detections) {
+                    
+                    // 取得邊界框 (Bounding Box)
+                    const bbox = detection.locationData.relativeBoundingBox;
+                    
+                    // 計算頭部中心點 (Box Center)
+                    // 這裡不使用平滑插值(Lerp)是因為多人對應 ID 比較複雜，
+                    // 但 FaceDetection 本身非常穩定，幾乎不會抖動。
+                    const centerX = (bbox.xmin + bbox.width / 2) * canvasElement.width;
+                    const centerY = (bbox.ymin + bbox.height / 2) * canvasElement.height;
+                    
+                    // 根據頭部大小調整光暈大小
+                    const size = (bbox.width * canvasElement.width) * 1.2; 
 
-                // 更新目標位置
-                targetX = rawX;
-                targetY = rawY;
-
-                // 初始化 (如果是第一次偵測到)
-                if (soulX === 0 && soulY === 0) {
-                    soulX = targetX;
-                    soulY = targetY;
+                    drawSoulHalo(centerX, centerY, size);
                 }
+
             } else {
-                statusDisplay.innerText = "SEARCHING USER...";
+                statusDisplay.innerText = "SEARCHING FOR SOULS...";
                 statusDisplay.style.color = "rgba(255,255,255,0.3)";
-            }
-
-            // 平滑計算：每一幀都只向目標移動一點點
-            soulX = lerp(soulX, targetX, smoothFactor);
-            soulY = lerp(soulY, targetY, smoothFactor);
-
-            // 只有當偵測到人，且位置有效時才繪製
-            if (targetX !== 0 && targetY !== 0) {
-                drawSoulHalo(soulX, soulY);
+                statusDisplay.style.textShadow = "none";
             }
         }
 
-        function drawSoulHalo(x, y) {
+        function drawSoulHalo(x, y, baseSize) {
+            // 限制最大最小尺寸，避免太靠近鏡頭時過大
+            const radius = Math.max(50, Math.min(baseSize, 250));
+
             // 1. 繪製核心光暈 (最強亮點)
-            const gradient = canvasCtx.createRadialGradient(x, y, 5, x, y, 120);
+            const gradient = canvasCtx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
             
             // 核心白光
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); 
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); 
             // 中層賽博藍
-            gradient.addColorStop(0.1, 'rgba(0, 243, 255, 0.8)'); 
+            gradient.addColorStop(0.3, 'rgba(0, 243, 255, 0.6)'); 
             // 外層紫色暈染
-            gradient.addColorStop(0.4, 'rgba(188, 19, 254, 0.3)'); 
+            gradient.addColorStop(0.7, 'rgba(188, 19, 254, 0.2)'); 
             // 邊緣透明
             gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
             canvasCtx.fillStyle = gradient;
             canvasCtx.beginPath();
-            canvasCtx.arc(x, y, 150, 0, Math.PI * 2);
+            canvasCtx.arc(x, y, radius, 0, Math.PI * 2);
             canvasCtx.fill();
 
             // 2. 繪製外圍能量環 (增加科技感)
             canvasCtx.beginPath();
-            canvasCtx.arc(x, y, 60, 0, Math.PI * 2);
-            canvasCtx.strokeStyle = 'rgba(0, 243, 255, 0.5)';
+            canvasCtx.arc(x, y, radius * 0.5, 0, Math.PI * 2);
+            canvasCtx.strokeStyle = 'rgba(0, 243, 255, 0.6)';
             canvasCtx.lineWidth = 2;
             canvasCtx.stroke();
 
             // 3. 繪製隨機閃爍粒子 (增加靈動感)
             for(let i=0; i<3; i++) {
-                const px = x + (Math.random() - 0.5) * 100;
-                const py = y + (Math.random() - 0.5) * 100;
-                const size = Math.random() * 3;
+                const px = x + (Math.random() - 0.5) * radius;
+                const py = y + (Math.random() - 0.5) * radius;
+                const pSize = Math.random() * 3;
                 
                 canvasCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#fff';
                 canvasCtx.beginPath();
-                canvasCtx.arc(px, py, size, 0, Math.PI * 2);
+                canvasCtx.arc(px, py, pSize, 0, Math.PI * 2);
                 canvasCtx.fill();
             }
         }
 
-        const pose = new Pose({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        // 初始化 Face Detection
+        const faceDetection = new FaceDetection({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
         }});
         
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true, // 開啟 MediaPipe 內建平滑
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
+        faceDetection.setOptions({
+            modelSelection: 0, // 0 是短距離模型(快速)，1 是全範圍模型
+            minDetectionConfidence: 0.5
         });
-        pose.onResults(onResults);
+        faceDetection.onResults(onResults);
 
         const camera = new Camera(videoElement, {
             onFrame: async () => {
-                await pose.send({image: videoElement});
+                await faceDetection.send({image: videoElement});
             },
             width: 1280,
             height: 720
