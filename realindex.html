@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
     <style>
         :root {
@@ -17,59 +16,79 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-dark); color: #fff; overflow-x: hidden; }
+        body { background-color: var(--bg-dark); color: #fff; overflow: hidden; height: 100vh; }
 
-        /* === 1. 頂部極簡大標籤 (Navigation) === */
+        /* === 1. 頂部極簡大標籤 (直接連結) === */
         .top-nav {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: 100px;
+            height: 150px; /* 增加高度讓按鈕更顯眼 */
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 40px;
             z-index: 1000;
             background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
         }
 
-        .nav-btn {
-            background: rgba(20, 20, 20, 0.6);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #aaa;
-            padding: 15px 40px;
-            font-size: 1.2rem;
+        /* 按鈕樣式 */
+        .nav-link {
+            text-decoration: none;
+            background: rgba(10, 10, 10, 0.7);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: #ccc;
+            padding: 18px 50px;
+            font-size: 1.3rem;
             font-weight: 800;
-            letter-spacing: 2px;
-            cursor: pointer;
+            letter-spacing: 3px;
             text-transform: uppercase;
-            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
-            transition: all 0.3s ease;
-            backdrop-filter: blur(5px);
+            /* 科幻切角造型 */
+            clip-path: polygon(15% 0, 100% 0, 100% 70%, 85% 100%, 0 100%, 0 30%);
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .nav-btn:hover, .nav-btn.active {
-            background: rgba(0, 243, 255, 0.1);
+        /* 發光特效 */
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .nav-link:hover::before {
+            left: 100%;
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 243, 255, 0.15);
             color: var(--primary);
             border-color: var(--primary);
-            text-shadow: 0 0 10px var(--primary);
+            text-shadow: 0 0 15px var(--primary);
             transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
         }
 
-        /* === 2. 中間靈魂映像區 (Soul Mirror) === */
+        /* === 2. 全螢幕靈魂映像區 === */
         .mirror-container {
             width: 100%;
-            height: 80vh; /* 佔據大部分螢幕 */
+            height: 100vh;
             position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
-            border-bottom: 2px solid var(--border);
         }
 
-        /* 隱藏原始 Video，只顯示 Canvas */
         #input_video { display: none; }
 
         #output_canvas {
@@ -78,201 +97,143 @@
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1); /* 鏡像翻轉 */
-            z-index: 1;
         }
 
-        .mirror-overlay {
+        /* 底部狀態字 */
+        .status-overlay {
             position: absolute;
-            z-index: 2;
-            bottom: 20px;
-            text-align: center;
+            bottom: 40px;
             width: 100%;
+            text-align: center;
+            z-index: 10;
             pointer-events: none;
         }
 
-        .mirror-text {
-            font-size: 1.5rem;
-            color: rgba(255,255,255,0.5);
+        .status-text {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.3);
             letter-spacing: 5px;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            animation: pulse 2s infinite;
         }
 
-        #soul-count {
-            color: var(--primary);
-            font-size: 3rem;
-            font-weight: bold;
-            display: block;
-        }
-
-        /* === 3. 下方內容承載區 (Content) === */
-        .content-section {
-            display: none; /* 預設隱藏 */
-            min-height: 100vh;
-            padding: 50px 20px;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .content-section.active { display: block; }
-
-        /* 嵌入內容的容器 (iframe 或是直接貼代碼的區域) */
-        .iframe-wrapper {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
-            overflow: hidden;
-            background: #111;
-            height: 1200px; /* 給予足夠高度 */
-        }
-
-        iframe { width: 100%; height: 100%; border: none; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 0.8; } 100% { opacity: 0.3; } }
     </style>
 </head>
 <body>
 
     <nav class="top-nav">
-        <button class="nav-btn" onclick="scrollToSection('project')">專案成果</button>
-        <button class="nav-btn" onclick="scrollToSection('ai-mind')">AI 思維</button>
-        <button class="nav-btn" onclick="scrollToSection('resources')">資源連結</button>
+        <a href="project.html" class="nav-link"><i class="fas fa-cube"></i> 專案成果</a>
+        <a href="mindset.html" class="nav-link"><i class="fas fa-brain"></i> AI 思維</a>
+        <a href="resource.html" class="nav-link"><i class="fas fa-link"></i> 資源連結</a>
     </nav>
 
     <div class="mirror-container">
         <video id="input_video"></video>
         <canvas id="output_canvas"></canvas>
         
-        <div class="mirror-overlay">
-            <span class="mirror-text">DETECTING SOULS</span>
-            <span id="soul-count">0</span>
-        </div>
-    </div>
-
-    <div id="project" class="content-section">
-        <div class="iframe-wrapper">
-            <iframe srcdoc='<body style="color:white; display:flex; justify-content:center; align-items:center; height:100%; background:#050505;"><h1>請在此處貼上【專案介紹】的程式碼</h1></body>'></iframe>
-        </div>
-    </div>
-
-    <div id="ai-mind" class="content-section">
-        <div class="iframe-wrapper">
-            <iframe srcdoc='<body style="color:white; display:flex; justify-content:center; align-items:center; height:100%; background:#050505;"><h1>請在此處貼上【AI 思維】的程式碼</h1></body>'></iframe>
-        </div>
-    </div>
-
-    <div id="resources" class="content-section">
-        <div class="iframe-wrapper">
-            <iframe srcdoc='<body style="color:white; display:flex; justify-content:center; align-items:center; height:100%; background:#050505;"><h1>請在此處貼上【資源連結】的程式碼</h1></body>'></iframe>
+        <div class="status-overlay">
+            <div class="status-text" id="status-display">INITIALIZING AI CORE...</div>
         </div>
     </div>
 
     <script>
-        // === 導航跳轉邏輯 ===
-        function scrollToSection(id) {
-            // 隱藏所有區塊
-            document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-            
-            // 顯示目標區塊
-            const target = document.getElementById(id);
-            if(target) {
-                target.classList.add('active');
-                event.target.classList.add('active');
-                
-                // 平滑滾動到內容
-                target.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-
-        // === MediaPipe 靈魂繪製邏輯 ===
         const videoElement = document.getElementById('input_video');
         const canvasElement = document.getElementById('output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const countElement = document.getElementById('soul-count');
-        
-        // 靈魂粒子系統
-        let particles = [];
-        
-        class SoulParticle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.vx = (Math.random() - 0.5) * 4;
-                this.vy = (Math.random() - 1) * 4 - 2; // 向上飄
-                this.life = 1.0;
-                this.color = Math.random() > 0.5 ? '#00f3ff' : '#bc13fe';
-                this.size = Math.random() * 5 + 2;
-            }
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.life -= 0.02;
-                this.size *= 0.95;
-            }
-            draw(ctx) {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
+        const statusDisplay = document.getElementById('status-display');
+
+        // 平滑移動變數
+        let soulX = 0;
+        let soulY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        const smoothFactor = 0.1; // 數值越小越平滑，但也越慢 (0.05 ~ 0.2 推薦)
+
+        // 線性插值函數 (讓移動變平滑的關鍵)
+        function lerp(start, end, amt) {
+            return (1 - amt) * start + amt * end;
         }
 
         function onResults(results) {
-            // 設定 Canvas 尺寸
+            // 設定畫布尺寸
             canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight * 0.8;
-            
-            // 清除畫布，畫上微透明黑色造成拖影效果
-            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            canvasElement.height = window.innerHeight;
+
+            // 清除畫布 (畫一個半透明黑色背景，製造一點點殘影效果，但不需要太強)
+            canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.9)'; // 若要看到真實攝影機畫面，改為 rgba(0,0,0,0)
             canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
 
-            // 更新人數
-            let peopleCount = 0;
-
             if (results.poseLandmarks) {
-                peopleCount = 1; // MediaPipe Pose 主要是單人，若要多人需改用 BlazePose 多人模式，這裡演示單人靈魂
+                statusDisplay.innerText = "SOUL LINKED";
+                statusDisplay.style.color = "var(--primary)";
 
-                // 取得核心位置 (胸口中心大約在 左肩11 與 右肩12 中間)
-                const leftShoulder = results.poseLandmarks[11];
-                const rightShoulder = results.poseLandmarks[12];
+                // 取得鼻子座標 (Landmark 0) 作為頭部中心
+                const nose = results.poseLandmarks[0];
                 
-                if (leftShoulder && rightShoulder) {
-                    // 計算螢幕上的座標 (注意鏡像與比例)
-                    const x = ((1 - (leftShoulder.x + rightShoulder.x) / 2)) * canvasElement.width;
-                    const y = ((leftShoulder.y + rightShoulder.y) / 2) * canvasElement.height;
+                // 轉換為畫布座標
+                let rawX = nose.x * canvasElement.width;
+                let rawY = nose.y * canvasElement.height;
 
-                    // 1. 繪製靈魂核心 (光球)
-                    const gradient = canvasCtx.createRadialGradient(x, y, 10, x, y, 60);
-                    gradient.addColorStop(0, 'white');
-                    gradient.addColorStop(0.2, 'rgba(0, 243, 255, 0.8)');
-                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-                    
-                    canvasCtx.fillStyle = gradient;
-                    canvasCtx.beginPath();
-                    canvasCtx.arc(x, y, 80, 0, Math.PI * 2);
-                    canvasCtx.fill();
+                // 更新目標位置
+                targetX = rawX;
+                targetY = rawY;
 
-                    // 2. 產生粒子
-                    for(let i=0; i<5; i++) {
-                        particles.push(new SoulParticle(x, y));
-                    }
+                // 初始化 (如果是第一次偵測到)
+                if (soulX === 0 && soulY === 0) {
+                    soulX = targetX;
+                    soulY = targetY;
                 }
+            } else {
+                statusDisplay.innerText = "SEARCHING USER...";
+                statusDisplay.style.color = "rgba(255,255,255,0.3)";
             }
+
+            // 平滑計算：每一幀都只向目標移動一點點
+            soulX = lerp(soulX, targetX, smoothFactor);
+            soulY = lerp(soulY, targetY, smoothFactor);
+
+            // 只有當偵測到人，且位置有效時才繪製
+            if (targetX !== 0 && targetY !== 0) {
+                drawSoulHalo(soulX, soulY);
+            }
+        }
+
+        function drawSoulHalo(x, y) {
+            // 1. 繪製核心光暈 (最強亮點)
+            const gradient = canvasCtx.createRadialGradient(x, y, 5, x, y, 120);
             
-            // 更新粒子動畫
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update();
-                particles[i].draw(canvasCtx);
-                if (particles[i].life <= 0) {
-                    particles.splice(i, 1);
-                }
-            }
+            // 核心白光
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)'); 
+            // 中層賽博藍
+            gradient.addColorStop(0.1, 'rgba(0, 243, 255, 0.8)'); 
+            // 外層紫色暈染
+            gradient.addColorStop(0.4, 'rgba(188, 19, 254, 0.3)'); 
+            // 邊緣透明
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
-            // 如果有人，顯示文字
-            countElement.innerText = peopleCount > 0 ? "1 SOUL DETECTED" : "SEARCHING...";
+            canvasCtx.fillStyle = gradient;
+            canvasCtx.beginPath();
+            canvasCtx.arc(x, y, 150, 0, Math.PI * 2);
+            canvasCtx.fill();
+
+            // 2. 繪製外圍能量環 (增加科技感)
+            canvasCtx.beginPath();
+            canvasCtx.arc(x, y, 60, 0, Math.PI * 2);
+            canvasCtx.strokeStyle = 'rgba(0, 243, 255, 0.5)';
+            canvasCtx.lineWidth = 2;
+            canvasCtx.stroke();
+
+            // 3. 繪製隨機閃爍粒子 (增加靈動感)
+            for(let i=0; i<3; i++) {
+                const px = x + (Math.random() - 0.5) * 100;
+                const py = y + (Math.random() - 0.5) * 100;
+                const size = Math.random() * 3;
+                
+                canvasCtx.fillStyle = Math.random() > 0.5 ? '#00f3ff' : '#fff';
+                canvasCtx.beginPath();
+                canvasCtx.arc(px, py, size, 0, Math.PI * 2);
+                canvasCtx.fill();
+            }
         }
 
         const pose = new Pose({locateFile: (file) => {
@@ -281,7 +242,7 @@
         
         pose.setOptions({
             modelComplexity: 1,
-            smoothLandmarks: true,
+            smoothLandmarks: true, // 開啟 MediaPipe 內建平滑
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5
         });
