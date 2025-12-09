@@ -7,96 +7,283 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --primary: #00f3ff;
-            --secondary: #bc13fe;
+            --primary: #00f3ff;   /* 賽博藍 */
+            --secondary: #bc13fe; /* 霓虹紫 */
             --bg-dark: #050505;
             --glass: rgba(20, 20, 35, 0.6);
             --glass-hover: rgba(30, 30, 50, 0.8);
             --border: rgba(255, 255, 255, 0.1);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background-color: var(--bg-dark); color: #fff; overflow-x: hidden; min-height: 100vh; }
-        
-        #canvas-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
 
-        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; padding-bottom: 80px; }
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
 
-        header { text-align: center; margin-bottom: 60px; animation: fadeInDown 1s ease; }
-        h1 { font-size: 3rem; background: linear-gradient(to right, #fff, var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; font-weight: 800; }
-        p.subtitle { color: #aaa; font-size: 1.2rem; max-width: 700px; margin: 0 auto; }
+        /* Canvas 背景 */
+        #canvas-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            /* 底部留白多一點，以免圖片放大時被切掉 */
+            padding-bottom: 100px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 1s ease;
+        }
+
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(to right, #fff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+
+        p.subtitle {
+            color: #aaa;
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
 
         /* 標題區塊 */
-        .section-header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; margin-top: 60px; }
-        .section-header h2 { font-size: 2rem; color: var(--primary); text-shadow: 0 0 10px rgba(0, 243, 255, 0.3); }
-        .section-line { flex: 1; height: 2px; background: linear-gradient(90deg, var(--border), transparent); }
-
-        /* 卡片樣式 (思維導向) */
-        .mindset-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; position: relative; }
-        @media (min-width: 1024px) {
-            .mindset-grid::before { content: ''; position: absolute; top: 30px; left: 10%; right: 10%; height: 2px; background: linear-gradient(90deg, var(--secondary), var(--primary)); z-index: -1; opacity: 0.5; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            margin-top: 60px;
         }
-        .mind-card { background: var(--glass); border: 1px solid var(--border); border-radius: 15px; padding: 25px 20px; backdrop-filter: blur(10px); transition: all 0.3s ease; position: relative; overflow: hidden; height: 100%; display: flex; flex-direction: column; }
-        .mind-card:hover { transform: translateY(-10px); border-color: var(--primary); background: var(--glass-hover); box-shadow: 0 10px 30px rgba(0, 243, 255, 0.15); }
-        .step-num { position: absolute; top: -10px; right: -10px; font-size: 4rem; font-weight: 900; color: rgba(255,255,255,0.03); }
-        .icon-box { width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #fff; margin-bottom: 20px; z-index: 1; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .mind-card h3 { font-size: 1.25rem; margin-bottom: 10px; color: #fff; z-index: 1; }
-        .mind-card p { color: #ccc; font-size: 0.95rem; line-height: 1.6; z-index: 1; }
-        .highlight { color: var(--primary); font-weight: bold; }
 
-        /* 工具矩陣 */
-        .tools-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .tool-card { background: rgba(255,255,255,0.03); border-left: 4px solid var(--secondary); border-radius: 10px; padding: 20px; transition: 0.3s; display: flex; flex-direction: column; }
-        .tool-card:hover { background: rgba(255,255,255,0.08); border-left-color: var(--primary); }
-        .tool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .tool-title { font-size: 1.1rem; font-weight: bold; color: #eee; }
-        .tool-icon { color: var(--secondary); font-size: 1.2rem; }
-        .tool-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
-        .tech-pill { background: rgba(0, 243, 255, 0.15); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; border: 1px solid rgba(0, 243, 255, 0.3); }
-        .tech-pill.highlight { background: rgba(188, 19, 254, 0.15); color: var(--secondary); border-color: rgba(188, 19, 254, 0.3); }
+        .section-header h2 {
+            font-size: 2rem;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
 
-        /* === 新增：底部圖片連結區塊 === */
+        .section-line {
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(90deg, var(--border), transparent);
+        }
+
+        /* === 1. 思維導向卡片 === */
+        .mindset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            position: relative;
+        }
+
+        /* 連線裝飾 (桌面版) */
+        @media (min-width: 1024px) {
+            .mindset-grid::before {
+                content: '';
+                position: absolute;
+                top: 30px;
+                left: 10%;
+                right: 10%;
+                height: 2px;
+                background: linear-gradient(90deg, var(--secondary), var(--primary));
+                z-index: -1;
+                opacity: 0.5;
+            }
+        }
+
+        .mind-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 25px 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mind-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+            background: var(--glass-hover);
+            box-shadow: 0 10px 30px rgba(0, 243, 255, 0.15);
+        }
+
+        .step-num {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(255,255,255,0.03);
+            z-index: 0;
+        }
+
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 20px;
+            z-index: 1;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .mind-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 10px;
+            color: #fff;
+            z-index: 1;
+        }
+
+        .mind-card p {
+            color: #ccc;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            z-index: 1;
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* === 2. 工具選型矩陣 === */
+        .tools-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .tool-card {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid var(--secondary);
+            border-radius: 10px;
+            padding: 20px;
+            transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tool-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-left-color: var(--primary);
+        }
+
+        .tool-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .tool-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #eee;
+        }
+
+        .tool-icon {
+            color: var(--secondary);
+            font-size: 1.2rem;
+        }
+
+        .tool-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .tech-pill {
+            background: rgba(0, 243, 255, 0.15);
+            color: var(--primary);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(0, 243, 255, 0.3);
+        }
+
+        .tech-pill.highlight {
+            background: rgba(188, 19, 254, 0.15);
+            color: var(--secondary);
+            border-color: rgba(188, 19, 254, 0.3);
+        }
+
+        /* === 3. 底部圖片展示區塊 (無連結/自動放大) === */
         .footer-links {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+            gap: 40px; /* 增加間距避免放大時重疊 */
             margin-top: 80px;
             padding-top: 40px;
             border-top: 1px solid var(--border);
         }
 
-        .link-card {
+        .view-card {
             display: block;
             position: relative;
             border-radius: 15px;
             overflow: hidden;
-            aspect-ratio: 16/9; /* 設定長寬比為 16:9 */
+            aspect-ratio: 16/9;
             border: 1px solid var(--border);
-            text-decoration: none;
-            transition: all 0.3s ease;
             background: #000;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 彈性動畫 */
+            cursor: zoom-in; /* 變更為放大鏡游標 */
+            transform-origin: center center;
         }
 
-        .link-card img {
+        .view-card img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform 0.5s ease;
-            opacity: 0.8;
+            opacity: 0.9;
         }
 
-        .link-card:hover {
+        /* 放大特效 */
+        .view-card:hover {
+            transform: scale(1.6); /* 放大 1.6 倍 */
+            z-index: 999; /* 浮在最上層 */
             border-color: var(--primary);
-            box-shadow: 0 0 25px rgba(0, 243, 255, 0.3);
-            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9);
         }
 
-        .link-card:hover img {
-            transform: scale(1.1); /* 圖片放大效果 */
+        .view-card:hover img {
             opacity: 1;
         }
 
-        .link-overlay {
+        .view-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
@@ -107,17 +294,23 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: opacity 0.3s ease;
         }
 
-        .link-title {
+        /* 放大時隱藏文字 */
+        .view-card:hover .view-overlay {
+            opacity: 0;
+        }
+
+        .view-title {
             font-size: 1.2rem;
             font-weight: bold;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
         
-        .link-icon {
-            background: var(--primary);
-            color: #000;
+        .view-icon {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
             width: 30px;
             height: 30px;
             border-radius: 50%;
@@ -127,8 +320,19 @@
             font-size: 0.9rem;
         }
 
-        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 768px) { .section-header { flex-direction: column; align-items: flex-start; } }
+        /* 響應式 */
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 5px; }
+            .section-line { width: 100%; }
+            .view-card:hover { transform: scale(1.1); } /* 手機版放大倍率小一點 */
+        }
+
+        /* 動畫 */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -145,36 +349,41 @@
             <h2><i class="fas fa-brain"></i> 核心思維五部曲</h2>
             <div class="section-line"></div>
         </div>
+
         <div class="mindset-grid">
             <div class="mind-card">
                 <span class="step-num">01</span>
                 <div class="icon-box"><i class="fas fa-search-location"></i></div>
                 <h3>問題導向</h3>
-                <p>從<span class="highlight">需求</span>出發，先問痛點，再問技術。</p>
+                <p>不從工具出發，而是從<span class="highlight">「需求」</span>出發。先問「痛點在哪？」，再問「AI 能不能解？」。</p>
             </div>
+
             <div class="mind-card">
                 <span class="step-num">02</span>
                 <div class="icon-box"><i class="fas fa-chart-line"></i></div>
-                <h3>成本效益</h3>
-                <p>運用<span class="highlight">商業腦</span>，判斷投入產出比 (ROI)。</p>
+                <h3>成本效益判斷</h3>
+                <p>這是<span class="highlight">商業腦</span>的運作。工程師常迷戀技術，但必須判斷投入資源與產出的價值 (ROI)。</p>
             </div>
+
             <div class="mind-card">
                 <span class="step-num">03</span>
                 <div class="icon-box"><i class="fas fa-toolbox"></i></div>
                 <h3>工具選型</h3>
-                <p>不被工具綁住，選<span class="highlight">最適合</span>而非最潮的框架。</p>
+                <p>依據需求選擇最適合的框架。<span class="highlight">「用工具，而不是被工具綁住」</span>是關鍵競爭力。</p>
             </div>
+
             <div class="mind-card">
                 <span class="step-num">04</span>
                 <div class="icon-box"><i class="fas fa-flask"></i></div>
                 <h3>快速試做</h3>
-                <p>先做 <span class="highlight">Demo</span> 再實作，迅速打樣驗證。</p>
+                <p>軟體開發的黃金原則：<span class="highlight">先做 Demo，再實作</span>。迅速打樣、迭代、驗證，失敗成本最低。</p>
             </div>
+
             <div class="mind-card">
                 <span class="step-num">05</span>
                 <div class="icon-box"><i class="fas fa-rocket"></i></div>
-                <h3>執行落地</h3>
-                <p>拒絕紙上談兵，解決細節，讓系統<span class="highlight">上線</span>。</p>
+                <h3>執行與落地</h3>
+                <p>拒絕紙上談兵。擁有強大的執行力，願意動手解決細節問題，讓系統真正<span class="highlight">上線運作</span>。</p>
             </div>
         </div>
 
@@ -182,107 +391,205 @@
             <h2><i class="fas fa-layer-group"></i> 技術堆疊與工具庫</h2>
             <div class="section-line"></div>
         </div>
+
         <div class="tools-container">
             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">商務文書 & 分析</span><i class="fas fa-file-excel tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill">Excel VBA</span><span class="tech-pill">Google Sheets</span></div>
+                <div class="tool-header">
+                    <span class="tool-title">商務文書 & 分析</span>
+                    <i class="fas fa-file-excel tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill">Excel VBA</span>
+                    <span class="tech-pill">Google Sheets</span>
+                    <span class="tech-pill">Power Query</span>
+                </div>
             </div>
+
             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">AI 模型訓練</span><i class="fas fa-eye tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill highlight">YOLOv8</span><span class="tech-pill highlight">Python</span></div>
+                <div class="tool-header">
+                    <span class="tool-title">AI 模型訓練</span>
+                    <i class="fas fa-eye tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill highlight">Python</span>
+                    <span class="tech-pill highlight">YOLOv8</span>
+                    <span class="tech-pill">PyTorch</span>
+                </div>
             </div>
+
             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">移動端 APP</span><i class="fas fa-mobile-alt tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill">Android Studio</span><span class="tech-pill">Kotlin</span></div>
+                <div class="tool-header">
+                    <span class="tool-title">桌面端開發</span>
+                    <i class="fas fa-desktop tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill">Python</span>
+                    <span class="tech-pill">OpenCV</span>
+                    <span class="tech-pill">Tkinter</span>
+                </div>
             </div>
+
             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">雲端 & API</span><i class="fas fa-cloud tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill highlight">GAS</span><span class="tech-pill">JavaScript</span></div>
+                <div class="tool-header">
+                    <span class="tool-title">移動端 APP</span>
+                    <i class="fas fa-mobile-alt tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill">Android Studio</span>
+                    <span class="tech-pill">Kotlin / Java</span>
+                </div>
             </div>
-             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">IoT 物聯網</span><i class="fas fa-microchip tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill">Arduino</span><span class="tech-pill">Raspberry Pi</span></div>
+
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-title">雲端 & API</span>
+                    <i class="fas fa-cloud tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill highlight">Google Apps Script</span>
+                    <span class="tech-pill">JavaScript</span>
+                </div>
             </div>
-             <div class="tool-card">
-                <div class="tool-header"><span class="tool-title">資料庫</span><i class="fas fa-database tool-icon"></i></div>
-                <div class="tool-tags"><span class="tech-pill">MySQL</span><span class="tech-pill">Metabase</span></div>
+
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-title">IoT 物聯網</span>
+                    <i class="fas fa-microchip tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill">Arduino</span>
+                    <span class="tech-pill">Raspberry Pi</span>
+                </div>
+            </div>
+
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-title">資料庫 & 儀表板</span>
+                    <i class="fas fa-database tool-icon"></i>
+                </div>
+                <div class="tool-tags">
+                    <span class="tech-pill">MySQL</span>
+                    <span class="tech-pill">Metabase</span>
+                    <span class="tech-pill">SQL</span>
+                </div>
             </div>
         </div>
 
         <div class="section-header">
-            <h2><i class="fas fa-link"></i> 相關資源連結</h2>
+            <h2><i class="fas fa-images"></i> 相關資源展示</h2>
             <div class="section-line"></div>
         </div>
 
         <div class="footer-links">
-            <a href="https://github.com/" target="_blank" class="link-card">
-                <img src="https://github.com/ilvs515047/aishare/blob/main/001.png?raw=true" alt="專案代碼">
-                <div class="link-overlay">
-                    <span class="link-title">GitHub 原始碼</span>
-                    <div class="link-icon"><i class="fas fa-arrow-right"></i></div>
+            <div class="view-card">
+                <img src="https://github.com/ilvs515047/aishare/blob/main/001.png?raw=true" alt="GitHub 原始碼預覽">
+                <div class="view-overlay">
+                    <span class="view-title">GitHub 原始碼預覽</span>
+                    <div class="view-icon"><i class="fas fa-search-plus"></i></div>
                 </div>
-            </a>
+            </div>
 
-            <a href="https://youtube.com/" target="_blank" class="link-card">
-                <img src="https://raw.githubusercontent.com/ilvs515047/aishare/refs/heads/main/002.png" alt="Demo 影片">
-                <div class="link-overlay">
-                    <span class="link-title">系統操作 Demo</span>
-                    <div class="link-icon"><i class="fas fa-play"></i></div>
+            <div class="view-card">
+                <img src="https://raw.githubusercontent.com/ilvs515047/aishare/refs/heads/main/002.png" alt="Demo 畫面預覽">
+                <div class="view-overlay">
+                    <span class="view-title">系統操作 Demo 畫面</span>
+                    <div class="view-icon"><i class="fas fa-search-plus"></i></div>
                 </div>
-            </a>
+            </div>
         </div>
-        </div>
+
+    </div>
 
     <script>
         const canvas = document.getElementById('canvas-bg');
         const ctx = canvas.getContext('2d');
-        let width, height, particles = [];
-        const config = { particleCount: 60, linkDistance: 160, speed: 0.4, primaryColor: {r: 188, g: 19, b: 254}, secondaryColor: {r: 0, g: 243, b: 255} };
+        let width, height;
+        let particles = [];
+        
+        // 粒子參數：紫色與藍色混合
+        const config = {
+            particleCount: 60,
+            linkDistance: 160,
+            speed: 0.4,
+            primaryColor: {r: 188, g: 19, b: 254}, // 紫色
+            secondaryColor: {r: 0, g: 243, b: 255} // 藍色
+        };
 
-        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
         window.addEventListener('resize', resize);
         resize();
 
         class Particle {
             constructor() {
-                this.x = Math.random() * width; this.y = Math.random() * height;
-                this.vx = (Math.random() - 0.5) * config.speed; this.vy = (Math.random() - 0.5) * config.speed;
-                this.size = Math.random() * 2 + 1; this.isPrimary = Math.random() > 0.5;
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * config.speed;
+                this.vy = (Math.random() - 0.5) * config.speed;
+                this.size = Math.random() * 2 + 1;
+                this.isPrimary = Math.random() > 0.5;
             }
             update() {
-                this.x += this.vx; this.y += this.vy;
-                if (this.x < 0 || this.x > width) this.vx *= -1; if (this.y < 0 || this.y > height) this.vy *= -1;
+                this.x += this.vx;
+                this.y += this.vy;
+                // 邊界反彈
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
             }
             draw() {
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 const c = this.isPrimary ? config.primaryColor : config.secondaryColor;
-                ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`; ctx.fill();
+                ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 0.6)`;
+                ctx.fill();
             }
         }
 
-        function initParticles() { particles = []; for (let i = 0; i < config.particleCount; i++) particles.push(new Particle()); }
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < config.particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
 
         function animate() {
             ctx.clearRect(0, 0, width, height);
+            
             particles.forEach((p1, index) => {
-                p1.update(); p1.draw();
+                p1.update();
+                p1.draw();
+
+                // 繪製連線
                 for (let j = index + 1; j < particles.length; j++) {
                     const p2 = particles[j];
-                    const dx = p1.x - p2.x; const dy = p1.y - p2.y;
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
+
                     if (dist < config.linkDistance) {
                         ctx.beginPath();
+                        // 顏色混合
                         const c1 = p1.isPrimary ? config.primaryColor : config.secondaryColor;
                         const c2 = p2.isPrimary ? config.primaryColor : config.secondaryColor;
-                        const r = Math.floor((c1.r + c2.r)/2); const g = Math.floor((c1.g + c2.g)/2); const b = Math.floor((c1.b + c2.b)/2);
-                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${1 - dist/config.linkDistance})`;
-                        ctx.lineWidth = 0.5; ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                        const r = Math.floor((c1.r + c2.r) / 2);
+                        const g = Math.floor((c1.g + c2.g) / 2);
+                        const b = Math.floor((c1.b + c2.b) / 2);
+
+                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${1 - dist / config.linkDistance})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
                     }
                 }
             });
             requestAnimationFrame(animate);
         }
-        initParticles(); animate();
+
+        initParticles();
+        animate();
     </script>
 </body>
 </html>
