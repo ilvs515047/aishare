@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 應用實戰：思維與工具</title>
+    <title>AI 應用實戰與安全規範</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
+            /* 主題色系整合 */
             --primary: #00f3ff;   /* 賽博藍 */
             --secondary: #bc13fe; /* 霓虹紫 */
+            --accent-green: #00ff9d; /* 安全綠 (來自第二份代碼) */
             --bg-dark: #050505;
             --glass: rgba(20, 20, 35, 0.6);
             --glass-hover: rgba(30, 30, 50, 0.8);
             --border: rgba(255, 255, 255, 0.1);
+            --text-muted: #8b9bb4;
         }
 
         * {
@@ -74,13 +77,14 @@
             align-items: center;
             gap: 15px;
             margin-bottom: 30px;
-            margin-top: 60px;
+            margin-top: 80px; /* 增加間距 */
         }
 
         .section-header h2 {
             font-size: 2rem;
             color: var(--primary);
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+            white-space: nowrap;
         }
 
         .section-line {
@@ -171,7 +175,7 @@
             z-index: 1;
         }
 
-        .highlight {
+        .highlight-text {
             color: var(--primary);
             font-weight: bold;
         }
@@ -238,103 +242,101 @@
             border-color: rgba(188, 19, 254, 0.3);
         }
 
-        /* === 3. 底部圖片展示區塊 (修改版：自動視窗置中) === */
-        .footer-links {
+        /* === 3. AI 安全規範卡片 (移植自第二份代碼) === */
+        .security-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 40px;
-            margin-top: 80px;
-            padding-top: 40px;
-            border-top: 1px solid var(--border);
+            gap: 30px;
         }
 
-        /* 卡片容器 (保持在原地，不移動) */
-        .view-card {
-            display: block;
+        .sec-card {
+            background: rgba(16, 30, 50, 0.6);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            padding: 30px;
+            border-radius: 10px;
             position: relative;
-            border-radius: 15px;
-            aspect-ratio: 16/9;
-            border: 1px solid var(--border);
-            background: #000;
-            cursor: zoom-in;
-            z-index: 1; /* 預設層級 */
+            backdrop-filter: blur(5px);
+            transition: all 0.4s ease;
+            opacity: 0; /* 初始隱藏，用JS顯示 */
+            transform: translateY(30px);
         }
 
-        /* 圖片基本樣式 */
-        .view-card img {
+        .sec-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px -10px rgba(0, 243, 255, 0.2);
+            background: rgba(16, 30, 50, 0.8);
+        }
+
+        /* 卡片裝飾角標 (保留特色) */
+        .sec-card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: -1px;
+            width: 20px;
+            height: 20px;
+            border-top: 2px solid var(--primary);
+            border-left: 2px solid var(--primary);
+            transition: 0.3s;
+        }
+
+        .sec-card:hover::before {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1); /* 平滑過渡 */
-            opacity: 0.9;
-            border-radius: 15px;
+            border-radius: 10px;
         }
 
-        /* === 關鍵修改：滑鼠移入時，圖片脫離容器，固定在視窗中央 === */
-        .view-card:hover img {
-            position: fixed; /* 固定定位，相對於瀏覽器視窗 */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); /* 精準置中 */
-            
-            /* 尺寸設定：佔據螢幕寬度的 85%，但保留原始比例 */
-            width: 85vw;
-            height: auto;
-            aspect-ratio: 16/9;
-            max-height: 90vh; /* 防止高度超出 */
-            max-width: 1200px; /* 防止在超大螢幕變得過大 */
-            
-            z-index: 9999; /* 最上層 */
-            opacity: 1;
-            object-fit: contain; /* 確保圖片完整顯示 */
-            border: 2px solid var(--primary);
-            
-            /* 利用 box-shadow 製作全螢幕暗色遮罩 (黑客技巧) */
-            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.85); 
-        }
-
-        /* 提升 hover 時容器的層級，確保觸發區塊穩定 */
-        .view-card:hover {
-            z-index: 9999;
-        }
-
-        /* 覆蓋層文字 */
-        .view-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-            color: #fff;
+        .sec-card-icon {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 15px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            transition: opacity 0.2s ease;
-            pointer-events: none; /* 讓滑鼠事件穿透 */
+            gap: 10px;
+            font-family: 'Consolas', monospace;
         }
 
-        /* 放大時隱藏文字 */
-        .view-card:hover .view-overlay {
-            opacity: 0;
+        .sec-card-icon span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
         }
 
-        .view-title {
-            font-size: 1.2rem;
+        .sec-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #fff;
+        }
+
+        .sec-card p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .sec-highlight {
+            color: var(--accent-green);
             font-weight: bold;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
-        
-        .view-icon {
-            background: rgba(255,255,255,0.2);
-            color: #fff;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+        /* 底部 Footer */
+        footer {
+            margin-top: 80px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
             font-size: 0.9rem;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* 動畫 */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* 響應式 */
@@ -342,14 +344,6 @@
             h1 { font-size: 2rem; }
             .section-header { flex-direction: column; align-items: flex-start; gap: 5px; }
             .section-line { width: 100%; }
-            /* 手機版設定：寬度更寬一點 */
-            .view-card:hover img { width: 95vw; }
-        }
-
-        /* 動畫 */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -373,35 +367,31 @@
                 <span class="step-num">01</span>
                 <div class="icon-box"><i class="fas fa-search-location"></i></div>
                 <h3>問題導向</h3>
-                <p>不從工具出發，而是從<span class="highlight">「需求」</span>出發。先問「痛點在哪？」，再問「AI 能不能解？」。</p>
+                <p>不從工具出發，而是從<span class="highlight-text">「需求」</span>出發。先問「痛點在哪？」，再問「AI 能不能解？」。</p>
             </div>
-
             <div class="mind-card">
                 <span class="step-num">02</span>
                 <div class="icon-box"><i class="fas fa-chart-line"></i></div>
                 <h3>成本效益判斷</h3>
-                <p>這是<span class="highlight">商業腦</span>的運作。工程師常迷戀技術，但必須判斷投入資源與產出的價值 (ROI)。</p>
+                <p>這是<span class="highlight-text">商業腦</span>的運作。工程師常迷戀技術，但必須判斷投入資源與產出的價值 (ROI)。</p>
             </div>
-
             <div class="mind-card">
                 <span class="step-num">03</span>
                 <div class="icon-box"><i class="fas fa-toolbox"></i></div>
                 <h3>工具選型</h3>
-                <p>依據需求選擇最適合的框架。<span class="highlight">「用工具，而不是被工具綁住」</span>是關鍵競爭力。</p>
+                <p>依據需求選擇最適合的框架。<span class="highlight-text">「用工具，而不是被工具綁住」</span>是關鍵競爭力。</p>
             </div>
-
             <div class="mind-card">
                 <span class="step-num">04</span>
                 <div class="icon-box"><i class="fas fa-flask"></i></div>
                 <h3>快速試做</h3>
-                <p>軟體開發的黃金原則：<span class="highlight">先做 Demo，再實作</span>。迅速打樣、迭代、驗證，失敗成本最低。</p>
+                <p>軟體開發的黃金原則：<span class="highlight-text">先做 Demo，再實作</span>。迅速打樣、迭代、驗證，失敗成本最低。</p>
             </div>
-
             <div class="mind-card">
                 <span class="step-num">05</span>
                 <div class="icon-box"><i class="fas fa-rocket"></i></div>
                 <h3>執行與落地</h3>
-                <p>拒絕紙上談兵。擁有強大的執行力，願意動手解決細節問題，讓系統真正<span class="highlight">上線運作</span>。</p>
+                <p>拒絕紙上談兵。擁有強大的執行力，願意動手解決細節問題，讓系統真正<span class="highlight-text">上線運作</span>。</p>
             </div>
         </div>
 
@@ -422,7 +412,6 @@
                     <span class="tech-pill">Power Query</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">AI 模型訓練</span>
@@ -434,7 +423,6 @@
                     <span class="tech-pill">PyTorch</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">桌面端開發</span>
@@ -446,7 +434,6 @@
                     <span class="tech-pill">Tkinter</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">移動端 APP</span>
@@ -457,7 +444,6 @@
                     <span class="tech-pill">Kotlin / Java</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">雲端 & API</span>
@@ -468,7 +454,6 @@
                     <span class="tech-pill">JavaScript</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">IoT 物聯網</span>
@@ -479,7 +464,6 @@
                     <span class="tech-pill">Raspberry Pi</span>
                 </div>
             </div>
-
             <div class="tool-card">
                 <div class="tool-header">
                     <span class="tool-title">資料庫 & 儀表板</span>
@@ -494,31 +478,50 @@
         </div>
 
         <div class="section-header">
-            <h2><i class="fas fa-images"></i> 相關資源展示</h2>
+            <h2><i class="fas fa-shield-alt"></i> AI 安全應用規範</h2>
             <div class="section-line"></div>
         </div>
 
-        <div class="footer-links">
-            <div class="view-card">
-                <img src="https://github.com/ilvs515047/aishare/blob/main/001.png?raw=true" alt="GitHub 原始碼預覽">
-                <div class="view-overlay">
-                    <span class="view-title">思維鍊</span>
-                    <div class="view-icon"><i class="fas fa-search-plus"></i></div>
-                </div>
+        <div class="security-grid">
+            <div class="sec-card">
+                <div class="sec-card-icon">01 <span>PRIVACY</span></div>
+                <h3>資料隱私保護</h3>
+                <p>所有輸入至 AI 模型的數據必須經過<span class="sec-highlight">去識別化</span>處理。嚴禁上傳含有個人身分證字號、財務資訊或公司核心機密的原始數據。</p>
             </div>
 
-            <div class="view-card">
-                <img src="https://raw.githubusercontent.com/ilvs515047/aishare/refs/heads/main/002.png" alt="Demo 畫面預覽">
-                <div class="view-overlay">
-                    <span class="view-title">與AI溝通</span>
-                    <div class="view-icon"><i class="fas fa-search-plus"></i></div>
-                </div>
+            <div class="sec-card">
+                <div class="sec-card-icon">02 <span>VALIDATION</span></div>
+                <h3>產出內容驗證</h3>
+                <p>AI 生成之內容僅供參考。使用者必須進行<span class="sec-highlight">人工查核 (Human-in-the-loop)</span>，確保程式碼無漏洞、資訊正確且無偏見後方可發布。</p>
+            </div>
+
+            <div class="sec-card">
+                <div class="sec-card-icon">03 <span>ACCESS</span></div>
+                <h3>權限與存取控制</h3>
+                <p>AI 系統API金鑰 (API Key) 視同最高機密。禁止將金鑰寫入前端程式碼或公開的 GitHub 儲存庫，應使用環境變數管理。</p>
+            </div>
+
+            <div class="sec-card">
+                <div class="sec-card-icon">04 <span>INJECTION</span></div>
+                <h3>提示注入防禦</h3>
+                <p>設計 AI 應用時，需防範<span class="sec-highlight">提示注入 (Prompt Injection)</span> 攻擊。系統應具備過濾機制，避免 AI 被誘導輸出有害指令。</p>
+            </div>
+
+            <div class="sec-card">
+                <div class="sec-card-icon">05 <span>COMPLIANCE</span></div>
+                <h3>合規性審查</h3>
+                <p>AI 的應用場景必須符合公司資安法規，恪遵資安紀律。</p>
             </div>
         </div>
+
+        <footer>
+            <p>© 2025 AI SECURITY DEPT. // INTERNAL USE ONLY</p>
+        </footer>
 
     </div>
 
     <script>
+        // === 1. 背景粒子動畫 (原程式碼保留) ===
         const canvas = document.getElementById('canvas-bg');
         const ctx = canvas.getContext('2d');
         let width, height;
@@ -604,6 +607,28 @@
 
         initParticles();
         animate();
+
+        // === 2. 安全卡片依序浮現動畫 (新增功能) ===
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.sec-card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        // 加入延遲，製造依序出現的效果
+                        setTimeout(() => {
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }, index * 100); // 縮短一點間隔讓動畫更流暢
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            cards.forEach(card => observer.observe(card));
+        });
     </script>
 </body>
 </html>
