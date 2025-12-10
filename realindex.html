@@ -1,442 +1,193 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Soul Mirror | Full Deck Interface</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tech Portal</title>
+    <style>
+        /* --- 基礎設定 --- */
+        :root {
+            --bg-color: #050505;
+            --primary-color: #00f2ff; /* 科技青 */
+            --secondary-color: #7000ff; /* 賽博紫 */
+            --text-color: #ffffff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-detection"></script>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
 
-  <style>
-    :root {
-      --cyan: #00f3ff;
-      --purple: #bc13fe;
-      --white: #ffffff;
-      --bg-dark: #050810;
-    }
+        body {
+            background-color: var(--bg-color);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: "Segoe UI", "Courier New", monospace;
-    }
+        /* --- 動態背景動畫 --- */
+        .background-glow {
+            position: absolute;
+            width: 200vw;
+            height: 200vh;
+            background: radial-gradient(circle at 50% 50%, 
+                rgba(112, 0, 255, 0.15), 
+                rgba(0, 242, 255, 0.1), 
+                transparent 60%);
+            animation: rotate 20s linear infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
 
-    body {
-      background: var(--bg-dark);
-      overflow: hidden;
-    }
+        @keyframes rotate {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
 
-    #input_video { display: none; }
+        /* --- 主容器 --- */
+        .container {
+            z-index: 1;
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
 
-    #output_canvas {
-      position: fixed;
-      inset: 0;
-      filter: contrast(1.1) brightness(1.1);
-    }
+        h1 {
+            color: var(--text-color);
+            font-weight: 300;
+            letter-spacing: 4px;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+            font-size: 1.5rem;
+            opacity: 0;
+            animation: fadeIn Down 1s ease forwards;
+        }
 
-    /* --- 頂部介面容器 --- */
-    .hud-header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 140px; /* 增加高度容納大按鈕 */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-      background: linear-gradient(to bottom, rgba(5, 8, 16, 0.95), transparent);
-      pointer-events: none;
-      padding-top: 10px;
-    }
+        /* --- 按鈕容器 --- */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+        }
 
-    .btn-group {
-      pointer-events: auto;
-      display: flex;
-      width: 96%; /* 幾乎填滿橫向 */
-      max-width: 1800px; /* 在超大螢幕上限制一下最大寬度 */
-      gap: 15px; /* 按鈕之間的縫隙 */
-    }
+        /* --- 科技感按鈕樣式 --- */
+        .tech-btn {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100px; /* 大按鈕高度 */
+            text-decoration: none;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
 
-    /* --- 高質感巨型按鈕 --- */
-    .hud-btn {
-      position: relative;
-      flex: 1; /* 關鍵：讓按鈕自動平分剩餘空間，填滿橫向 */
-      
-      /* 玻璃質感背景 */
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      
-      /* 邊框與文字 */
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: rgba(255, 255, 255, 0.8);
-      
-      /* 尺寸加大 */
-      height: 70px; /* 固定高度 */
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      
-      font-size: 20px; /* 字體變大 */
-      font-weight: 700;
-      letter-spacing: 8px; /* 字距拉開，更有氣勢 */
-      text-transform: uppercase;
-      cursor: pointer;
-      
-      /* 切角造型 (調整為適應長條狀的切角) */
-      clip-path: polygon(
-        20px 0, 
-        100% 0, 
-        100% calc(100% - 20px), 
-        calc(100% - 20px) 100%, 
-        0 100%, 
-        0 20px
-      );
-      
-      transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      overflow: hidden;
-    }
+        /* 按鈕內的發光線條 */
+        .tech-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg, 
+                transparent, 
+                rgba(255, 255, 255, 0.1), 
+                transparent
+            );
+            transition: 0.5s;
+        }
 
-    /* 光掃過效果 */
-    .hud-btn::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%; width: 100%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: 0.5s;
-      transform: skewX(-25deg);
-    }
+        /* --- 滑鼠懸停特效 (Hover) --- */
+        .tech-btn:hover {
+            transform: scale(1.05); /* 稍微放大 */
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.4), inset 0 0 20px rgba(0, 242, 255, 0.1);
+            color: #fff;
+            letter-spacing: 6px; /* 文字間距拉開 */
+            text-shadow: 0 0 8px #fff;
+        }
 
-    .hud-btn:hover::before { left: 100%; }
+        .tech-btn:hover::before {
+            left: 100%; /* 掃光效果 */
+        }
 
-    .hud-btn:hover {
-      transform: translateY(-4px); /* 上浮幅度增加 */
-      background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(255, 255, 255, 0.5);
-      color: #fff;
-    }
+        /* 第二個按鈕的差異化顏色 (紫色系) */
+        .tech-btn.secondary {
+            color: #d8b4fe;
+            border-color: rgba(139, 92, 246, 0.3);
+        }
 
-    /* --- 個別按鈕配色 --- */
+        .tech-btn.secondary:hover {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 20px rgba(112, 0, 255, 0.4), inset 0 0 20px rgba(112, 0, 255, 0.1);
+            color: #fff;
+        }
 
-    /* 1. NEXUS (Cyan) */
-    .btn-cyan { border-bottom: 4px solid rgba(0, 243, 255, 0.4); } /* 底部線條加粗 */
-    .btn-cyan:hover {
-      border-color: var(--cyan);
-      box-shadow: inset 0 0 30px rgba(0, 243, 255, 0.2);
-      filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.7));
-      text-shadow: 0 0 10px rgba(0, 243, 255, 1);
-    }
+        /* 進場動畫 */
+        .btn-wrapper {
+            width: 100%;
+            opacity: 0;
+        }
+        
+        .btn-wrapper:nth-child(1) { animation: fadeInUp 0.8s ease forwards 0.3s; }
+        .btn-wrapper:nth-child(2) { animation: fadeInUp 0.8s ease forwards 0.5s; }
 
-    /* 2. MATRIX (Purple) */
-    .btn-purple { border-bottom: 4px solid rgba(188, 19, 254, 0.4); }
-    .btn-purple:hover {
-      border-color: var(--purple);
-      box-shadow: inset 0 0 30px rgba(188, 19, 254, 0.2);
-      filter: drop-shadow(0 0 10px rgba(188, 19, 254, 0.7));
-      text-shadow: 0 0 10px rgba(188, 19, 254, 1);
-    }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    /* 3. SYSTEM (White) */
-    .btn-white { border-bottom: 4px solid rgba(255, 255, 255, 0.4); }
-    .btn-white:hover {
-      border-color: var(--white);
-      box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.2);
-      filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
-      text-shadow: 0 0 10px rgba(255, 255, 255, 1);
-    }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    .hud-btn:active { transform: translateY(2px); filter: brightness(0.8); }
-
-    .status {
-      position: fixed;
-      bottom: 30px;
-      width: 100%;
-      text-align: center;
-      font-size: 0.8rem;
-      letter-spacing: 6px;
-      color: rgba(255, 255, 255, 0.2);
-      z-index: 10;
-      text-shadow: 0 0 5px rgba(0, 243, 255, 0.3);
-    }
-  </style>
+    </style>
 </head>
-
 <body>
-  <div class="hud-header">
-    <div class="btn-group">
-      <button class="hud-btn btn-cyan" onclick="jump(1)">
-        AI應用分享
-      </button>
-      
-      <button class="hud-btn btn-purple" onclick="jump(2)">
-        AI思維鍊
-      </button>
-      
-      <button class="hud-btn btn-white" onclick="jump(3)">
-        YOLO學習
-      </button>
+
+    <div class="background-glow"></div>
+
+    <div class="container">
+        <h1>ACCESS CONTROL</h1>
+        
+        <div class="button-group">
+            <div class="btn-wrapper">
+                <a href="https://ilvs515047.github.io/aishare/index.html" target="_blank" class="tech-btn">
+                    競賽專案分享
+                </a>
+            </div>
+
+            <div class="btn-wrapper">
+                <a href="https://ilvs515047.github.io/aishare/ai.html" target="_blank" class="tech-btn secondary">
+                    構築建造
+                </a>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <video id="input_video" playsinline></video>
-  <canvas id="output_canvas"></canvas>
-  <div class="status" id="status">INITIALIZING SYSTEM...</div>
-
-  <script>
-    const video = document.getElementById("input_video");
-    const canvas = document.getElementById("output_canvas");
-    const ctx = canvas.getContext("2d");
-    const statusText = document.getElementById("status");
-
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    let detector = null;
-    let souls = {};
-    let frameCount = 0;
-
-    // --- 設定三個按鈕的跳轉連結 ---
-    function jump(index) {
-      let url = "";
-      switch(index) {
-        case 1: url = "https://ilvs515047.github.io/aishare/index.html"; break;
-        case 2: url = "https://ilvs515047.github.io/aishare/ai.html"; break;
-        case 3: url = "https://ilvs515047.github.io/aishare/yolo.html"; break;
-      }
-      if(url) window.location.href = url;
-    }
-
-    // --- 背景氛圍光球 ---
-    let ambientOrbs = [];
-    const ORB_COUNT = 5;
-
-    class AmbientOrb {
-      constructor() { this.init(); }
-      init() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-        this.radius = Math.random() * 300 + 200;
-        const colors = [ "rgba(20, 0, 40, 0.4)", "rgba(0, 10, 40, 0.5)", "rgba(0, 40, 40, 0.3)" ];
-        this.color = colors[Math.floor(Math.random() * colors.length)];
-      }
-      update() {
-        this.x += this.vx; this.y += this.vy;
-        if(this.x < -this.radius || this.x > canvas.width + this.radius) this.vx *= -1;
-        if(this.y < -this.radius || this.y > canvas.height + this.radius) this.vy *= -1;
-      }
-      draw() {
-        const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
-        g.addColorStop(0, this.color);
-        g.addColorStop(1, "rgba(0,0,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    for(let i=0; i<ORB_COUNT; i++) ambientOrbs.push(new AmbientOrb());
-
-    // --- 參數 ---
-    const LERP_FACTOR = 0.1;
-    const MAX_SPEED = 1;
-    const FADE_SPEED = 0.05; 
-    const SMOKE_SPAWN_RATE = 1;
-    const SMOKE_LIFE_DECAY = 0.025;
-    const SMOKE_RISE_SPEED = 2.0;
-
-    function lerp(a, b, t) { return a + (b - a) * t; }
-
-    function drawSoul(x, y, mainAlpha, particles) {
-      ctx.save();
-      ctx.globalCompositeOperation = "screen";
-
-      // 1. 煙霧
-      particles.forEach(p => {
-        ctx.globalAlpha = mainAlpha * p.life * 0.4; 
-        const smokeG = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-        smokeG.addColorStop(0, "rgba(200, 240, 255, 0.4)"); 
-        smokeG.addColorStop(0.5, "rgba(100, 150, 255, 0.1)");
-        smokeG.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.beginPath();
-        ctx.fillStyle = smokeG;
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // 2. 核心
-      ctx.globalAlpha = mainAlpha; 
-      const coreG = ctx.createRadialGradient(x, y, 5, x, y, 60);
-      coreG.addColorStop(0, "rgba(255,255,255,1)");
-      coreG.addColorStop(0.2, "rgba(0,243,255,0.8)");
-      coreG.addColorStop(0.5, "rgba(188,19,254,0.4)");
-      coreG.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.beginPath();
-      ctx.fillStyle = coreG;
-      ctx.arc(x, y, 70, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 環
-      ctx.beginPath();
-      ctx.strokeStyle = "rgba(0,243,255, 0.6)";
-      ctx.lineWidth = 1.5;
-      ctx.arc(x, y, 35, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // 點
-      for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? "#00f3ff" : "#fff";
-        ctx.beginPath();
-        ctx.arc(
-          x + (Math.random() - 0.5) * 40,
-          y + (Math.random() - 0.5) * 40,
-          Math.random() * 2,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-      }
-      ctx.restore();
-    }
-
-    async function init() {
-      try {
-        await tf.setBackend("webgl");
-        await tf.ready();
-        detector = await faceDetection.createDetector(faceDetection.SupportedModels.MediaPipeFaceDetector, {
-          runtime: "mediapipe",
-          solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_detection",
-          maxFaces: 16,
-          minDetectionConfidence: 0.5
-        });
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-          audio: false
-        });
-        video.srcObject = stream;
-        await new Promise(r => video.onloadedmetadata = () => { video.play(); r(); });
-        statusText.innerText = "SYSTEM ONLINE";
-        requestAnimationFrame(loop);
-      } catch (err) {
-        console.error(err);
-        statusText.innerText = "SENSOR ERROR";
-      }
-    }
-
-    async function loop() {
-      frameCount++;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#020408"; 
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.globalCompositeOperation = "screen"; 
-      ambientOrbs.forEach(orb => { orb.update(); orb.draw(); });
-      ctx.globalCompositeOperation = "source-over";
-
-      if (!detector || video.readyState < 2) { requestAnimationFrame(loop); return; }
-
-      let faces = [];
-      try { faces = await detector.estimateFaces(video, { flipHorizontal: false }); } catch (e) {}
-
-      const sx = canvas.width / (video.videoWidth || 1280);
-      const sy = canvas.height / (video.videoHeight || 720);
-
-      ctx.save();
-      ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
-
-      const currentFrameIndices = new Set();
-      let targets = {}; 
-
-      if (faces && faces.length > 0) {
-        faces.forEach((face, i) => {
-          currentFrameIndices.add(i);
-          const box = face.box;
-          const targetX = ((box.xMin + box.xMax) / 2) * sx;
-          const targetY = ((box.yMin + box.yMax) / 2) * sy;
-          targets[i] = { x: targetX, y: targetY };
-          if (!souls[i]) souls[i] = { x: targetX, y: targetY, alpha: 0, targetAlpha: 1, particles: [] };
-          else souls[i].targetAlpha = 1;
-        });
-        statusText.innerText = `LINKED SIGNALS : ${faces.length}`;
-      } else {
-        statusText.innerText = "SEARCHING...";
-      }
-
-      Object.keys(souls).forEach((key) => {
-        const i = parseInt(key);
-        const s = souls[i];
-
-        if (!currentFrameIndices.has(i)) s.targetAlpha = 0;
-        s.alpha = lerp(s.alpha, s.targetAlpha, FADE_SPEED);
-
-        if (targets[i]) {
-          const dx = targets[i].x - s.x;
-          const dy = targets[i].y - s.y;
-          let moveX = dx * LERP_FACTOR;
-          let moveY = dy * LERP_FACTOR;
-          const moveDist = Math.sqrt(moveX * moveX + moveY * moveY);
-          if (moveDist > MAX_SPEED) {
-            const ratio = MAX_SPEED / moveDist;
-            moveX *= ratio;
-            moveY *= ratio;
-          }
-          s.x += moveX;
-          s.y += moveY;
-        }
-
-        if (s.alpha > 0.1) {
-          if (Math.random() < 0.8) { 
-            for(let n = 0; n < SMOKE_SPAWN_RATE; n++) {
-              s.particles.push({
-                x: s.x + (Math.random() - 0.5) * 40,
-                y: s.y + (Math.random() - 0.5) * 20,
-                vx: (Math.random() - 0.5) * 0.5, 
-                vy: -Math.random() * SMOKE_RISE_SPEED - 0.5, 
-                size: Math.random() * 20 + 10,
-                life: 1.0, 
-                driftOffset: Math.random() * Math.PI * 2
-              });
-            }
-          }
-        }
-
-        for (let pIndex = s.particles.length - 1; pIndex >= 0; pIndex--) {
-          const p = s.particles[pIndex];
-          p.y += p.vy;
-          p.x += p.vx + Math.sin(frameCount / 25 + p.driftOffset) * 0.5;
-          p.size += 0.2;
-          p.life -= SMOKE_LIFE_DECAY;
-          if (p.life <= 0) s.particles.splice(pIndex, 1);
-        }
-
-        if (s.alpha > 0.01) {
-          drawSoul(s.x, s.y, s.alpha, s.particles);
-        } else if (s.targetAlpha === 0 && s.particles.length === 0) {
-          delete souls[i];
-        }
-      });
-
-      ctx.restore();
-      requestAnimationFrame(loop);
-    }
-
-    window.addEventListener("resize", () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ambientOrbs.forEach(orb => orb.init());
-    });
-
-    init();
-  </script>
 </body>
 </html>
