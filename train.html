@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上表單系統雙向流程演示</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Using Lucide Icons via unpkg -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        
+        .node-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 主角：正在動作的元件 (唯一閃爍) */
+        .node-active {
+            box-shadow: 0 0 40px rgba(56, 189, 248, 0.5);
+            border-color: #38bdf8;
+            background-color: #1e293b;
+            transform: scale(1.1);
+            z-index: 50; /* 最高層級 */
+            opacity: 1 !important;
+        }
+        
+        /* 配角：相關但被動的元件 (清楚但不搶戲) */
+        .node-related {
+            opacity: 0.9 !important;
+            filter: grayscale(0);
+            transform: scale(1);
+            border-color: #64748b; /* Slate 500 */
+            background-color: #1e293b;
+            z-index: 10;
+        }
+
+        /* 無關：背景 (變暗) */
+        .node-inactive {
+            opacity: 0.2;
+            filter: grayscale(1);
+            transform: scale(0.95);
+            border-color: #334155;
+            z-index: 0;
+        }
+
+        /* 連線動畫 */
+        @keyframes flow-animation {
+            0% { stroke-dashoffset: 20; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        .line-path {
+            stroke-dasharray: 10;
+            animation: flow-animation 1s linear infinite;
+        }
+
+        /* 狀態氣泡動畫 */
+        @keyframes pop-in {
+            0% { transform: translate(-50%, 20px) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+
+        .status-bubble {
+            animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-origin: bottom center;
+        }
+
+        /* Tab Styles */
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        .tab-active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        .tab-inactive {
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+        }
+        .tab-inactive:hover {
+            background-color: #334155;
+            color: #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Icons
+        const Icon = ({ name, size = 24, className }) => {
+            const icons = {
+                FileJson: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></>,
+                Palette: <><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.01 17.461 2 12 2z"/></>,
+                LayoutTemplate: <><rect width="18" height="18" x="3" y="3" rx="1"/><path d="M21 9H3"/><path d="M21 15H3"/><path d="M12 3v18"/></>,
+                ServerCog: <><circle cx="12" cy="12" r="3"/><path d="M4.5 10H7"/><path d="M17 10h2.5"/><path d="M4.5 14H7"/><path d="M17 14h2.5"/><path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></>,
+                Database: <><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></>,
+                User: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+                Wrench: <><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></>,
+                Play: <polygon points="5 3 19 12 5 21 5 3"/>,
+                RotateCcw: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/>,
+                ArrowRight: <><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></>,
+                Check: <polyline points="20 6 9 17 4 12" />
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name]}
+                </svg>
+            );
+        };
+
+        // Scenario Configurations
+        // focusNode: The SINGLE node that flashes and shows a bubble.
+        // activeNodes: The nodes involved in the connection (including the focusNode).
+        const scenarios = {
+            userFlow: {
+                title: "流程一：資料填寫與儲存",
+                color: "blue",
+                steps: [
+                    {
+                        title: "1. 開啟系統",
+                        desc: "作業員主動開啟網頁。主架構僅被動載入。",
+                        activeNodes: ['main', 'user'],
+                        focusNode: 'user', 
+                        connection: null,
+                        nodeLabel: "點擊: 開啟表單網址"
+                    },
+                    {
+                        title: "2. 填寫資料",
+                        desc: "作業員輸入資料中。系統在背景進行檢查。",
+                        activeNodes: ['user', 'main'],
+                        focusNode: 'user',
+                        connection: 'user-main',
+                        nodeLabel: "輸入: 溫度 25°C"
+                    },
+                    {
+                        title: "3. 提交發送",
+                        desc: "主架構將資料打包，發送 POST 請求給 GAS。",
+                        activeNodes: ['main', 'gas'],
+                        focusNode: 'main',
+                        connection: 'main-gas',
+                        nodeLabel: "動作: 發送 POST 請求"
+                    },
+                    {
+                        title: "4. GAS 處理",
+                        desc: "GAS 收到請求，正在執行轉發腳本。",
+                        activeNodes: ['gas', 'sheet'],
+                        focusNode: 'gas',
+                        connection: 'gas-sheet',
+                        nodeLabel: "執行: doPost(e)"
+                    },
+                    {
+                        title: "5. 資料庫儲存",
+                        desc: "Google Sheet 接收並寫入新的一行資料。",
+                        activeNodes: ['gas', 'sheet'],
+                        focusNode: 'sheet',
+                        connection: 'gas-sheet',
+                        nodeLabel: "動作: 新增一列資料"
+                    }
+                ]
+            },
+            devFlow: {
+                title: "流程二：系統開發與更新",
+                color: "amber",
+                steps: [
+                    {
+                        title: "1. 修改定義",
+                        desc: "工程師編輯 JSON 檔案。",
+                        activeNodes: ['json'],
+                        focusNode: 'json',
+                        connection: null,
+                        nodeLabel: "編輯: 新增 '壓力' 欄位"
+                    },
+                    {
+                        title: "2. 樣式載入",
+                        desc: "主架構讀取 CSS。CSS 檔是被讀取方。",
+                        activeNodes: ['css', 'main'],
+                        focusNode: 'css',
+                        connection: 'css-main',
+                        nodeLabel: "提供: Style.css"
+                    },
+                    {
+                        title: "3. 產生介面",
+                        desc: "主架構根據 JSON 與 CSS 渲染出新的輸入框。",
+                        activeNodes: ['json', 'main'],
+                        focusNode: 'main',
+                        connection: 'json-main',
+                        nodeLabel: "渲染: <input name='press'>"
+                    }
+                ]
+            }
+        };
+
+        const App = () => {
+            const [mode, setMode] = useState('userFlow');
+            const [stepIndex, setStepIndex] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const timerRef = useRef(null);
+
+            const currentScenario = scenarios[mode];
+            const currentStepData = currentScenario.steps[stepIndex];
+
+            const switchMode = (newMode) => {
+                setMode(newMode);
+                setStepIndex(0);
+                setIsPlaying(false);
+            };
+
+            const nextStep = () => {
+                setStepIndex(prev => (prev < currentScenario.steps.length - 1 ? prev + 1 : 0));
+            };
+
+            useEffect(() => {
+                if (isPlaying) {
+                    timerRef.current = setInterval(() => {
+                        setStepIndex(prev => {
+                            if (prev < currentScenario.steps.length - 1) return prev + 1;
+                            setIsPlaying(false);
+                            return prev;
+                        });
+                    }, 2500);
+                } else {
+                    clearInterval(timerRef.current);
+                }
+                return () => clearInterval(timerRef.current);
+            }, [isPlaying, currentScenario]);
+
+            // Strict Node State Logic
+            const getNodeState = (id) => {
+                // 1. Only the Focus Node is ACTIVE (Flashing)
+                if (id === currentStepData.focusNode) return 'active';
+                
+                // 2. Other nodes involved in the step are RELATED (Visible but Static)
+                if (currentStepData.activeNodes.includes(id)) return 'related';
+                
+                // 3. Everyone else is INACTIVE (Hidden/Dim)
+                return 'inactive';
+            };
+
+            // SVG Connection Lines
+            const Connection = ({ id, startX, startY, endX, endY, active }) => {
+                if (!active) return null;
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
+                
+                return (
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{overflow: 'visible'}}>
+                        <defs>
+                            <marker id={`arrow-${id}`} markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill={mode === 'userFlow' ? '#3b82f6' : '#f59e0b'} />
+                            </marker>
+                            <linearGradient id={`grad-${id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor={mode === 'userFlow' ? '#3b82f6' : '#f59e0b'} stopOpacity="0.8" />
+                                <stop offset="100%" stopColor={mode === 'userFlow' ? '#60a5fa' : '#fbbf24'} stopOpacity="1" />
+                            </linearGradient>
+                        </defs>
+                        {/* Base Line */}
+                        <path 
+                            d={`M${startX},${startY} Q${midX},${midY} ${endX},${endY}`} 
+                            stroke={`url(#grad-${id})`} 
+                            strokeWidth="4" 
+                            fill="none" 
+                            className="opacity-30"
+                        />
+                        {/* Animated Dash */}
+                        <path 
+                            d={`M${startX},${startY} Q${midX},${midY} ${endX},${endY}`} 
+                            stroke={`url(#grad-${id})`} 
+                            strokeWidth="4" 
+                            fill="none" 
+                            strokeDasharray="10 10"
+                            className="line-path"
+                            markerEnd={`url(#arrow-${id})`}
+                        />
+                        {/* Traveling Dot */}
+                         <circle r="6" fill="white" filter="drop-shadow(0 0 4px rgba(255,255,255,0.8))">
+                            <animateMotion 
+                                dur="1s" 
+                                repeatCount="indefinite"
+                                path={`M${startX},${startY} Q${midX},${midY} ${endX},${endY}`}
+                            />
+                        </circle>
+                    </svg>
+                );
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 flex flex-col items-center max-w-6xl mx-auto">
+                    
+                    {/* Header & Tabs */}
+                    <div className="text-center mb-8 w-full z-10 relative">
+                        <h1 className="text-3xl md:text-4xl font-bold text-white mb-6 tracking-wider">
+                            系統流程可視化
+                        </h1>
+                        
+                        <div className="flex justify-center gap-4 mb-4">
+                            <button 
+                                onClick={() => switchMode('userFlow')}
+                                className={`px-8 py-4 rounded-xl font-bold flex items-center gap-3 text-lg tab-btn ${mode === 'userFlow' ? 'tab-active' : 'tab-inactive'}`}
+                            >
+                                <Icon name="User" size={24} />
+                                流程一：作業員填寫
+                            </button>
+                            <button 
+                                onClick={() => switchMode('devFlow')}
+                                className={`px-8 py-4 rounded-xl font-bold flex items-center gap-3 text-lg tab-btn ${mode === 'devFlow' ? 'bg-amber-600 text-white shadow-lg' : 'tab-inactive'}`}
+                                style={mode === 'devFlow' ? {backgroundColor: '#d97706'} : {}}
+                            >
+                                <Icon name="Wrench" size={24} />
+                                流程二：工程師開發
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Main Diagram Container */}
+                    <div className="relative w-full bg-slate-800/80 rounded-3xl border border-slate-700 p-8 shadow-2xl mb-8 min-h-[500px] flex items-center justify-center backdrop-blur-sm">
+                        
+                        {/* Connections Overlay */}
+                        <div className="absolute inset-0 w-full h-full">
+                            {/* Coordinates are approximated percentages for 3 columns layout */}
+                            {/* User Flow Connections */}
+                            <Connection id="user-main" startX="50%" startY="65%" endX="50%" endY="35%" active={currentStepData.connection === 'user-main'} /> {/* Upward */}
+                            <Connection id="main-gas" startX="55%" startY="35%" endX="75%" endY="35%" active={currentStepData.connection === 'main-gas'} />
+                            <Connection id="gas-sheet" startX="85%" startY="45%" endX="85%" endY="65%" active={currentStepData.connection === 'gas-sheet'} />
+                            
+                            {/* Dev Flow Connections */}
+                            <Connection id="json-main" startX="25%" startY="35%" endX="45%" endY="35%" active={currentStepData.connection === 'json-main'} />
+                            <Connection id="css-main" startX="25%" startY="65%" endX="45%" endY="45%" active={currentStepData.connection === 'css-main'} />
+                        </div>
+
+                        {/* Nodes Grid */}
+                        <div className="relative z-10 w-full grid grid-cols-1 md:grid-cols-3 gap-12 h-full items-center">
+                            
+                            {/* Column 1: Config (Left) */}
+                            <div className="flex flex-col justify-center gap-20 items-center">
+                                <Node 
+                                    id="json" 
+                                    title="題目定義 (JSON)" 
+                                    icon="FileJson" 
+                                    color="bg-yellow-500" 
+                                    state={getNodeState('json')} 
+                                    label={currentStepData.nodeLabel}
+                                />
+                                <Node 
+                                    id="css" 
+                                    title="共用樣式 (CSS)" 
+                                    icon="Palette" 
+                                    color="bg-pink-500" 
+                                    state={getNodeState('css')} 
+                                    label={currentStepData.nodeLabel}
+                                />
+                            </div>
+
+                            {/* Column 2: Frontend (Center) */}
+                            <div className="flex flex-col items-center justify-center gap-24 h-full">
+                                <Node 
+                                    id="main" 
+                                    title="主架構 (HTML)" 
+                                    icon="LayoutTemplate" 
+                                    color="bg-blue-500" 
+                                    state={getNodeState('main')} 
+                                    label={currentStepData.nodeLabel}
+                                    isCenter={true}
+                                />
+                                
+                                <Node 
+                                    id="user" 
+                                    title="作業員 (User)" 
+                                    icon="User" 
+                                    color="bg-indigo-500" 
+                                    state={getNodeState('user')} 
+                                    label={currentStepData.nodeLabel}
+                                    shape="circle"
+                                />
+                            </div>
+
+                            {/* Column 3: Backend (Right) */}
+                            <div className="flex flex-col justify-center gap-20 items-center">
+                                <Node 
+                                    id="gas" 
+                                    title="GAS (中介層)" 
+                                    icon="ServerCog" 
+                                    color="bg-green-500" 
+                                    state={getNodeState('gas')} 
+                                    label={currentStepData.nodeLabel}
+                                />
+                                <Node 
+                                    id="sheet" 
+                                    title="資料庫 (Sheet)" 
+                                    icon="Database" 
+                                    color="bg-emerald-600" 
+                                    state={getNodeState('sheet')} 
+                                    label={currentStepData.nodeLabel}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step Controller */}
+                    <div className="w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-700 p-6 flex flex-col md:flex-row gap-8 items-center shadow-xl">
+                        
+                        {/* Info Text */}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                                <span className={`px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${mode === 'userFlow' ? 'bg-blue-500/20 text-blue-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                    STEP {stepIndex + 1}
+                                </span>
+                                <h2 className="text-xl font-bold text-white">{currentStepData.title}</h2>
+                            </div>
+                            <p className="text-slate-400 text-base leading-relaxed">
+                                {currentStepData.desc}
+                            </p>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-4 w-full md:w-auto">
+                             <button 
+                                onClick={() => setIsPlaying(!isPlaying)}
+                                className={`flex-1 md:flex-none px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${
+                                    isPlaying 
+                                    ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20' 
+                                    : 'bg-white text-slate-900 hover:bg-slate-200'
+                                }`}
+                            >
+                                {isPlaying ? '暫停' : <><Icon name="Play" size={18} /> 自動播放</>}
+                            </button>
+
+                            <button 
+                                onClick={nextStep}
+                                className="flex-1 md:flex-none px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 border border-slate-600 flex items-center justify-center gap-2"
+                                disabled={isPlaying}
+                            >
+                                下一步 <Icon name="ArrowRight" size={18} />
+                            </button>
+
+                            <button 
+                                onClick={() => {setStepIndex(0); setIsPlaying(false);}}
+                                className="px-4 py-3 bg-slate-800 text-slate-400 rounded-xl hover:text-white border border-slate-600"
+                            >
+                                <Icon name="RotateCcw" size={18} />
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            );
+        };
+
+        // Enhanced Node Component
+        const Node = ({ id, title, icon, color, state, label, shape = "rect", isCenter }) => {
+            // CSS Logic mapping
+            let stateClasses = "";
+            let showBubble = false;
+
+            if (state === 'active') {
+                stateClasses = "node-active";
+                showBubble = true;
+            } else if (state === 'related') {
+                stateClasses = "node-related";
+                showBubble = false;
+            } else {
+                stateClasses = "node-inactive";
+                showBubble = false;
+            }
+
+            return (
+                <div className={`relative flex flex-col items-center transition-all duration-500
+                    ${stateClasses}
+                    ${shape === 'circle' ? 'rounded-full' : 'rounded-2xl'}
+                    bg-slate-800 border-2 p-4 min-w-[140px]
+                `}>
+                    {/* Status Bubble (The "What am I doing" indicator) - ONLY for Active Node */}
+                    {showBubble && label && (
+                        <div className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm shadow-[0_0_15px_rgba(255,255,255,0.5)] z-30 status-bubble flex items-center gap-2 border-2 border-blue-500">
+                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                             {label}
+                             {/* Small Triangle pointer */}
+                             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white"></div>
+                        </div>
+                    )}
+
+                    {/* Icon Container */}
+                    <div className={`p-4 rounded-xl ${color} text-white mb-2 shadow-inner`}>
+                        <Icon name={icon} size={32} />
+                    </div>
+                    
+                    {/* Title */}
+                    <div className="font-bold text-slate-200 text-sm">{title}</div>
+
+                    {/* Active Glow Ring (Optional) */}
+                    {state === 'active' && (
+                        <div className="absolute inset-0 rounded-xl border-2 border-white/30 animate-ping pointer-events-none"></div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
