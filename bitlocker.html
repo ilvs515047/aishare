@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BitLocker 邏輯核心模擬</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #050505;
+            color: #e2e8f0;
+            overflow-y: auto; /* Allow scrolling for details */
+            height: 100vh;
+        }
+        
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* CRT Screen Effect */
+        .crt-scanline {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .pipeline-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            height: 250px;
+            position: relative;
+        }
+
+        /* Animated Data Blocks */
+        .data-block {
+            width: 60px;
+            height: 80px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #94a3b8;
+            position: absolute;
+            transition: transform 0.1s linear;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            overflow: hidden;
+            z-index: 20;
+        }
+
+        .data-block.encrypted { border-color: #ef4444; color: #fca5a5; }
+        .data-block.decrypted { border-color: #22c55e; color: #86efac; background: #064e3b; }
+        .data-block.garbage { border-color: #eab308; color: #fde047; background: #422006; }
+
+        /* The AES Engine */
+        .aes-engine {
+            width: 180px;
+            height: 180px;
+            background: #0f172a;
+            border: 4px solid #334155;
+            border-radius: 10px;
+            position: relative;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.1);
+            transition: all 0.3s;
+        }
+
+        .aes-engine.active { border-color: #3b82f6; box-shadow: 0 0 50px rgba(59, 130, 246, 0.4); }
+        .aes-engine.error { border-color: #ef4444; box-shadow: 0 0 50px rgba(239, 68, 68, 0.4); }
+        .aes-engine.success { border-color: #22c55e; box-shadow: 0 0 50px rgba(34, 197, 94, 0.4); }
+
+        /* Key Slot */
+        .key-slot {
+            width: 140px;
+            height: 30px;
+            background: #000;
+            border: 2px dashed #475569;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #64748b;
+        }
+        .key-slot.inserted { border-style: solid; background: #1e293b; color: #fff; }
+
+        .gear { animation: spin 4s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Math Flow Styles */
+        .math-box {
+            background: #111827;
+            border: 1px solid #374151;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            text-align: center;
+            position: relative;
+        }
+        .math-arrow { color: #4b5563; font-size: 14px; }
+        .math-val { display: block; margin-top: 4px; font-weight: bold; }
+        
+        .val-cipher { color: #f87171; } /* Red */
+        .val-tweak { color: #facc15; } /* Yellow */
+        .val-key { color: #60a5fa; } /* Blue */
+        .val-plain { color: #4ade80; } /* Green */
+        .val-bad { color: #a16207; } /* Muddy yellow */
+
+        .operator {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            border-radius: 50%;
+            background: #374151;
+            color: #fff;
+            text-align: center;
+            font-size: 10px;
+            margin: 0 5px;
+        }
+    </style>
+</head>
+<body class="flex flex-col bg-slate-950">
+
+    <!-- Top Status Bar -->
+    <div class="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900 z-20 shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-lg font-bold tracking-wider"><span class="text-blue-500">AES-XTS</span> 運算核心</h1>
+            <div class="flex gap-2 text-xs">
+                <span class="px-2 py-1 bg-slate-800 rounded text-slate-400">Algorithm: AES-256</span>
+                <span class="px-2 py-1 bg-slate-800 rounded text-slate-400">Mode: XTS (Tweak)</span>
+            </div>
+        </div>
+        <div id="engine-status" class="text-red-500 font-bold mono text-sm">STATUS: LOCKED</div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex flex-col relative overflow-hidden">
+        <div class="crt-scanline"></div>
+
+        <!-- Upper Half: The Pipeline Animation -->
+        <div class="flex border-b border-slate-800 h-[320px] shrink-0">
+            <!-- Source -->
+            <div class="w-1/5 bg-slate-900 border-r border-slate-800 p-4 flex flex-col z-10">
+                <h3 class="text-xs font-bold text-slate-500 mb-2 uppercase">HDD (密文輸入)</h3>
+                <div class="flex-1 bg-black rounded border border-slate-700 p-2 overflow-hidden relative">
+                    <div id="source-hex" class="text-[10px] leading-3 text-red-400/80 mono opacity-80 break-all"></div>
+                    <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/80"></div>
+                </div>
+                <div class="mt-2 text-xs flex justify-between text-slate-500">
+                    <span>Sector:</span><span id="sector-id" class="text-yellow-400">0</span>
+                </div>
+            </div>
+
+            <!-- Engine Stage -->
+            <div class="flex-1 bg-slate-950 relative flex flex-col items-center justify-center p-4">
+                <div class="w-full max-w-3xl relative h-48 mb-4">
+                    <div class="absolute top-1/2 left-0 right-0 h-1 bg-slate-800 -translate-y-1/2"></div>
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                        <div id="aes-engine" class="aes-engine">
+                            <div class="text-xs text-slate-500 mb-2">AES-256 ENGINE</div>
+                            <i class="fa-solid fa-gear text-4xl text-slate-600 mb-2" id="engine-gear"></i>
+                            <div id="key-slot" class="key-slot"><span class="animate-pulse">INSERT KEY</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex gap-4 z-20">
+                    <button onclick="setMode('brute')" id="btn-brute" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs text-white flex items-center gap-2">
+                        <i class="fa-solid fa-bomb text-red-500"></i> 暴力破解
+                    </button>
+                    <button onclick="setMode('tpm_fail')" class="px-4 py-2 bg-slate-800 border border-slate-600 rounded text-xs text-slate-500 flex items-center gap-2 opacity-50 cursor-not-allowed">
+                        <i class="fa-solid fa-microchip"></i> TPM 失效
+                    </button>
+                    <button onclick="setMode('recovery')" id="btn-rec" class="px-4 py-2 bg-blue-900/30 hover:bg-blue-900/50 border border-blue-500 rounded text-xs text-white flex items-center gap-2">
+                        <i class="fa-solid fa-key text-yellow-400"></i> 輸入金鑰
+                    </button>
+                </div>
+                <div id="bf-counter" class="text-[10px] text-slate-500 mono mt-2 h-4"></div>
+            </div>
+
+            <!-- Output -->
+            <div class="w-1/5 bg-slate-900 border-l border-slate-800 p-4 flex flex-col z-10">
+                <h3 class="text-xs font-bold text-slate-500 mb-2 uppercase">RAM (明文輸出)</h3>
+                <div class="flex-1 bg-black rounded border border-slate-700 p-4 relative flex items-center justify-center overflow-hidden">
+                    <div id="output-content" class="text-center opacity-0 transition-opacity duration-500">
+                        <i class="fa-solid fa-file-image text-4xl text-green-500 mb-2"></i>
+                        <div class="text-green-400 font-bold text-xs">機密.jpg</div>
+                    </div>
+                    <div id="output-garbage" class="absolute inset-0 bg-black text-[10px] leading-3 text-yellow-600/80 mono p-2 break-all overflow-hidden"></div>
+                    <div id="output-lock" class="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <i class="fa-solid fa-lock text-2xl text-slate-700"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lower Half: The MATH Logic Details -->
+        <div class="flex-1 bg-slate-900 p-6 flex flex-col items-center">
+            <h2 class="text-sm font-bold text-slate-400 mb-6 uppercase tracking-widest w-full text-center border-b border-slate-800 pb-2">
+                AES-XTS 數學運算詳解 (Step-by-Step Logic)
+            </h2>
+            
+            <div class="flex items-center justify-center gap-2 w-full max-w-5xl overflow-x-auto pb-4">
+                
+                <!-- Step 1: Inputs -->
+                <div class="flex flex-col gap-4">
+                    <div class="math-box w-40">
+                        <div class="text-[10px] text-slate-500">輸入: 密文塊 (Cipher)</div>
+                        <span class="math-val val-cipher" id="math-c">0000...</span>
+                    </div>
+                    <div class="math-box w-40">
+                        <div class="text-[10px] text-slate-500">輸入: Tweak (磁區偏移)</div>
+                        <span class="math-val val-tweak" id="math-t">0000...</span>
+                    </div>
+                </div>
+
+                <!-- XOR Operator -->
+                <div class="flex flex-col items-center">
+                    <div class="text-slate-600 text-[10px] mb-1">Pre-XOR</div>
+                    <div class="operator">⊕</div>
+                </div>
+
+                <!-- Step 2: Intermediate -->
+                <div class="math-box w-40 border-dashed opacity-70">
+                    <div class="text-[10px] text-slate-500">中間值 (Tweaked)</div>
+                    <span class="math-val text-slate-300" id="math-pp">Loading...</span>
+                </div>
+
+                <!-- Decrypt Operator -->
+                <div class="flex flex-col items-center gap-1">
+                    <div class="text-blue-400 text-[10px]">AES-DEC</div>
+                    <i class="fa-solid fa-arrow-right text-slate-600"></i>
+                    <div class="math-box w-24 border-blue-900/50 bg-blue-900/10">
+                        <div class="text-[10px] text-blue-400">Key ($K$)</div>
+                        <span class="math-val val-key text-[10px]" id="math-k">Waiting...</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Decrypted Intermediate -->
+                <div class="math-box w-40 border-dashed opacity-70">
+                    <div class="text-[10px] text-slate-500">解密後中間值</div>
+                    <span class="math-val text-slate-300" id="math-dp">Loading...</span>
+                </div>
+
+                <!-- XOR Operator -->
+                <div class="flex flex-col items-center">
+                    <div class="text-slate-600 text-[10px] mb-1">Post-XOR ($T$)</div>
+                    <div class="operator">⊕</div>
+                </div>
+
+                <!-- Step 4: Output -->
+                <div class="math-box w-40 border-green-900/50 bg-green-900/10" id="result-box">
+                    <div class="text-[10px] text-green-400">輸出: 明文 (Plaintext)</div>
+                    <span class="math-val val-plain" id="math-p">Waiting...</span>
+                </div>
+
+            </div>
+
+            <!-- Formula Text -->
+            <div class="mt-4 text-xs font-mono text-slate-500 bg-black px-4 py-2 rounded border border-slate-800">
+                公式: <span class="text-green-400">Plaintext</span> = AES_Decrypt( <span class="text-red-400">Cipher</span> ⊕ <span class="text-yellow-400">Tweak</span> , <span class="text-blue-400">Key</span> ) ⊕ <span class="text-yellow-400">Tweak</span>
+            </div>
+            
+            <div id="math-explanation" class="mt-2 text-xs text-slate-400 max-w-2xl text-center">
+                等待運算啟動...
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Setup ---
+        const speed = 2;
+        let currentMode = 'idle';
+        let keyAttemptCount = 0;
+        let animationId;
+        let mathInterval;
+        
+        const engine = document.getElementById('aes-engine');
+        const keySlot = document.getElementById('key-slot');
+        const gear = document.getElementById('engine-gear');
+        const outputGarbage = document.getElementById('output-garbage');
+        const outputContent = document.getElementById('output-content');
+        const outputLock = document.getElementById('output-lock');
+        const bfCounter = document.getElementById('bf-counter');
+        const sourceHex = document.getElementById('source-hex');
+        const sectorId = document.getElementById('sector-id');
+
+        // Math Elements
+        const mathC = document.getElementById('math-c');
+        const mathT = document.getElementById('math-t');
+        const mathK = document.getElementById('math-k');
+        const mathP = document.getElementById('math-p');
+        const mathPP = document.getElementById('math-pp'); // Pre-processed
+        const mathDP = document.getElementById('math-dp'); // Decrypted-processed
+        const resultBox = document.getElementById('result-box');
+        const mathExplanation = document.getElementById('math-explanation');
+
+        // Helper: Random Hex
+        function randomHex(len) {
+            let s = '';
+            for(let i=0; i<len; i++) s += Math.floor(Math.random()*16).toString(16).toUpperCase();
+            return s;
+        }
+
+        function formatHex(hex) {
+            return hex.match(/.{1,4}/g).join(' ');
+        }
+
+        // Fill Noise
+        function fillNoise() {
+            sourceHex.innerHTML = randomHex(600).match(/.{1,2}/g).join(' ');
+            outputGarbage.innerHTML = randomHex(600).match(/.{1,2}/g).join(' ');
+        }
+        fillNoise();
+
+        // --- Math Logic Simulation ---
+        function updateMathLogic() {
+            if(currentMode === 'idle') return;
+
+            // 1. Inputs (Simulate reading disk)
+            const cVal = randomHex(8);
+            const tVal = randomHex(8); // Tweak based on sector
+            
+            mathC.innerText = formatHex(cVal);
+            mathT.innerText = formatHex(tVal);
+            
+            // Intermediate calculations (Fake math visually)
+            mathPP.innerText = formatHex(randomHex(8)); 
+            
+            // 2. Key Status
+            if(currentMode === 'brute') {
+                // Key is changing and WRONG
+                mathK.innerText = formatHex(randomHex(8));
+                mathK.className = "math-val text-red-500 animate-pulse";
+                
+                // Result is GARBAGE
+                const pVal = randomHex(8);
+                mathP.innerText = formatHex(pVal);
+                mathP.className = "math-val val-bad";
+                mathDP.innerText = formatHex(randomHex(8));
+                
+                resultBox.className = "math-box w-40 border-red-900/50 bg-red-900/10";
+                
+            } else if (currentMode === 'recovery') {
+                // Key is STABLE and CORRECT
+                mathK.innerText = "EF4A 91B2..."; // Fixed correct key part
+                mathK.className = "math-val val-key";
+                
+                // Result is CLEAN (Simulated)
+                // In reality, this would be meaningful bytes
+                mathP.innerText = "DATA OK"; 
+                mathP.className = "math-val val-plain";
+                mathDP.innerText = formatHex(randomHex(8)); // Internal still looks random
+                
+                resultBox.className = "math-box w-40 border-green-900/50 bg-green-900/10";
+            }
+        }
+
+        // --- Block Animation ---
+        function spawnDataBlock() {
+            if (currentMode === 'idle') return;
+
+            const container = document.querySelector('.w-full.max-w-3xl'); // Engine container
+            if(!container) return;
+
+            const block = document.createElement('div');
+            block.className = 'data-block encrypted';
+            block.innerHTML = `<span class="text-[8px]">${randomHex(4)}</span>`;
+            
+            block.style.left = '0%';
+            block.style.top = '50%';
+            block.style.transform = 'translate(0, -50%)';
+            container.appendChild(block);
+
+            let pos = 0;
+            let phase = 'enc';
+
+            const timer = setInterval(() => {
+                pos += 1; // Speed
+                block.style.left = pos + '%';
+
+                // Entering Engine (approx 45%)
+                if(pos > 45 && pos < 55) {
+                    if(phase === 'enc') {
+                        phase = 'proc';
+                        block.style.opacity = 0; 
+                    }
+                }
+
+                // Exiting Engine (approx 55%)
+                if(pos >= 55 && phase === 'proc') {
+                    phase = 'out';
+                    block.style.opacity = 1;
+                    if(currentMode === 'recovery') {
+                        block.className = 'data-block decrypted';
+                        block.innerHTML = '<i class="fa-solid fa-check"></i>';
+                    } else {
+                        block.className = 'data-block garbage';
+                        block.innerHTML = '??';
+                    }
+                }
+
+                if(pos > 100) {
+                    clearInterval(timer);
+                    block.remove();
+                }
+            }, 10);
+        }
+
+        // --- Modes ---
+        function setMode(mode) {
+            currentMode = mode;
+            clearInterval(mathInterval);
+            clearInterval(animationId);
+            
+            // Reset UI
+            engine.className = 'aes-engine';
+            keySlot.className = 'key-slot';
+            gear.style.animationDuration = '0s';
+            outputLock.classList.remove('hidden');
+            outputContent.style.opacity = '0';
+            outputGarbage.classList.remove('hidden');
+
+            if(mode === 'tpm_fail') return;
+
+            if(mode === 'brute') {
+                engine.classList.add('error');
+                gear.className = "fa-solid fa-gear text-4xl text-red-500 gear";
+                gear.style.animationDuration = '0.2s';
+                document.getElementById('engine-status').innerHTML = "STATUS: BRUTE FORCE...";
+                document.getElementById('engine-status').className = "text-yellow-500 font-bold mono text-sm blink";
+                
+                keyAttemptCount = 0;
+                animationId = setInterval(() => {
+                    keyAttemptCount += 482910381;
+                    bfCounter.innerText = `Keys Tried: ${keyAttemptCount.toLocaleString()}`;
+                    sectorId.innerText = parseInt(sectorId.innerText) + 1;
+                    spawnDataBlock();
+                }, 100);
+
+                mathExplanation.innerHTML = "<span class='text-red-400'>錯誤演示：</span> 隨機 Key ($K_{rand}$) 導致解密函數 $D_K$ 輸出錯誤數值。即使再與 Tweak 做 XOR，結果依然是毫無意義的雜訊。";
+                mathInterval = setInterval(updateMathLogic, 100);
+            }
+
+            if(mode === 'recovery') {
+                keySlot.innerText = "VERIFYING...";
+                setTimeout(() => {
+                    keySlot.innerText = "KEY MATCHED";
+                    keySlot.className = "key-slot inserted";
+                    
+                    engine.classList.add('success');
+                    gear.className = "fa-solid fa-gear text-4xl text-green-500 gear";
+                    gear.style.animationDuration = '4s';
+                    
+                    document.getElementById('engine-status').innerHTML = "STATUS: DECRYPTED";
+                    document.getElementById('engine-status').className = "text-green-500 font-bold mono text-sm";
+                    
+                    outputLock.classList.add('hidden');
+                    outputGarbage.classList.add('hidden');
+                    outputContent.style.opacity = '1';
+
+                    mathExplanation.innerHTML = "<span class='text-green-400'>正確演示：</span> 輸入正確金鑰 ($K_{real}$)。運算流程完美逆轉加密過程：$P = D_K(C \\oplus T) \\oplus T$，成功還原原始資料。";
+
+                    animationId = setInterval(() => {
+                        spawnDataBlock();
+                        sectorId.innerText = parseInt(sectorId.innerText) + 1;
+                    }, 200);
+                    mathInterval = setInterval(updateMathLogic, 200);
+
+                }, 800);
+            }
+        }
+
+        // Init
+        fillNoise();
+        setInterval(fillNoise, 2000); // Slowly shift noise
+
+    </script>
+</body>
+</html>
