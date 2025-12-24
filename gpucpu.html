@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU vs GPU 工作原理可視化</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        
+        /* 動畫過渡效果 */
+        .pixel {
+            transition: background-color 0.1s ease;
+        }
+
+        .cpu-core {
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        
+        .gpu-core {
+            transition: background-color 0.3s ease;
+        }
+
+        .processing {
+            background-color: #fbbf24 !important; /* Yellow-400 */
+            transform: scale(1.1);
+        }
+
+        .finished {
+            background-color: #4ade80 !important; /* Green-400 */
+        }
+
+        .pulse {
+            animation: pulse-animation 1s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- 標題區 -->
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">CPU vs GPU 工作原理</h1>
+        <p class="text-slate-400 text-sm md:text-base">序列處理 (Sequential) vs 平行運算 (Parallel)</p>
+    </header>
+
+    <!-- 控制區 -->
+    <div class="flex gap-4 mb-8">
+        <button onclick="startSimulation('cpu')" id="btn-cpu" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg shadow-lg font-bold transition flex items-center gap-2">
+            <span>▶ 執行 CPU 模式</span>
+        </button>
+        <button onclick="startSimulation('gpu')" id="btn-gpu" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg shadow-lg font-bold transition flex items-center gap-2">
+            <span>▶ 執行 GPU 模式</span>
+        </button>
+        <button onclick="resetAll()" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg shadow-lg font-bold transition">
+            重置
+        </button>
+    </div>
+
+    <!-- 主展示區 -->
+    <div class="flex flex-col md:flex-row gap-8 w-full max-w-6xl">
+        
+        <!-- CPU 區塊 -->
+        <div class="flex-1 bg-slate-800 rounded-xl p-6 shadow-2xl border border-slate-700 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-2 opacity-10">
+                <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-blue-400 mb-1 flex items-center gap-2">
+                CPU (中央處理器)
+            </h2>
+            <p class="text-xs text-slate-400 mb-4 h-10">
+                少量的強大核心。就像一位數學教授，能處理極其複雜的邏輯，但一次只能專注做一件事情（或少數幾件）。
+            </p>
+
+            <!-- CPU 核心示意圖 -->
+            <div class="flex justify-center gap-4 mb-6">
+                <div id="cpu-core-1" class="cpu-core w-24 h-24 bg-slate-900 border-2 border-blue-500 rounded-lg flex items-center justify-center text-blue-500 font-bold text-xl relative">
+                    Core 1
+                    <div class="absolute bottom-1 text-[10px] text-slate-500">Logic Master</div>
+                </div>
+            </div>
+
+            <!-- CPU 任務進度 (單線程掃描) -->
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-700">
+                <div class="text-xs text-center text-slate-500 mb-1">任務：渲染 100 個像素</div>
+                <div id="cpu-grid" class="grid grid-cols-10 gap-1 w-full max-w-[200px] mx-auto aspect-square">
+                    <!-- JS 將生成 100 個 grid items -->
+                </div>
+            </div>
+            
+            <div class="mt-4 text-center">
+                <span id="cpu-status" class="text-sm font-mono text-slate-300">狀態: 待機</span>
+                <div class="w-full bg-slate-700 rounded-full h-2.5 mt-2">
+                    <div id="cpu-progress" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GPU 區塊 -->
+        <div class="flex-1 bg-slate-800 rounded-xl p-6 shadow-2xl border border-slate-700 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-2 opacity-10">
+                <svg width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM8 15c0-1.66 1.34-3 3-3 .35 0 .69.07 1 .18V6h5v2h-3v7.03c-.02 1.64-1.35 2.97-3 2.97-1.66 0-3-1.34-3-3z"/></svg>
+            </div>
+
+            <h2 class="text-2xl font-bold text-purple-400 mb-1 flex items-center gap-2">
+                GPU (圖形處理器)
+            </h2>
+            <p class="text-xs text-slate-400 mb-4 h-10">
+                大量的微小核心。就像一千個小學生，單人解題能力不如教授，但可以「同時」幫一千個人填色或做簡單運算。
+            </p>
+
+            <!-- GPU 核心示意圖 (矩陣) -->
+            <div class="flex justify-center mb-6">
+                <div class="grid grid-cols-10 gap-0.5 w-24 h-24 p-1 bg-slate-900 border-2 border-purple-500 rounded-lg">
+                    <!-- 裝飾用的小格子，代表許多核心 -->
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                    <div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div><div class="bg-purple-900/50 w-full h-full"></div>
+                </div>
+            </div>
+
+            <!-- GPU 任務進度 (平行處理) -->
+            <div class="bg-slate-900 p-2 rounded-lg border border-slate-700">
+                <div class="text-xs text-center text-slate-500 mb-1">任務：渲染 100 個像素</div>
+                <div id="gpu-grid" class="grid grid-cols-10 gap-1 w-full max-w-[200px] mx-auto aspect-square">
+                    <!-- JS 將生成 100 個 grid items -->
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <span id="gpu-status" class="text-sm font-mono text-slate-300">狀態: 待機</span>
+                <div class="w-full bg-slate-700 rounded-full h-2.5 mt-2">
+                    <div id="gpu-progress" class="bg-purple-500 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 知識點總結 -->
+    <div class="mt-12 bg-slate-800 p-6 rounded-xl max-w-4xl w-full border border-slate-700">
+        <h3 class="text-xl font-bold text-white mb-4">💡 核心概念總結</h3>
+        <div class="grid md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-bold text-blue-400 mb-2">CPU (序列處理)</h4>
+                <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
+                    <li><strong>強大的單核性能</strong>：時脈高，指令集複雜。</li>
+                    <li><strong>低延遲 (Low Latency)</strong>：能快速切換任務，適合跑操作系統、打開程式。</li>
+                    <li><strong>邏輯分支</strong>：擅長處理 "如果...那麼..." (If-Else) 的複雜判斷。</li>
+                    <li><strong>弱點</strong>：面對海量且重複的簡單數據（如螢幕上的幾百萬個像素），逐一處理效率太低。</li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold text-purple-400 mb-2">GPU (平行處理)</h4>
+                <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
+                    <li><strong>海量的小核心</strong>：時脈較低，指令集簡單。</li>
+                    <li><strong>高吞吐量 (High Throughput)</strong>：可以同時處理大量數據。</li>
+                    <li><strong>SIMD 架構</strong>：單指令多數據流（Single Instruction, Multiple Data），一個命令叫所有核心做一樣的事。</li>
+                    <li><strong>應用</strong>：圖形渲染、深度學習、矩陣運算。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化 Grid
+        const gridSize = 100; // 10x10
+        const cpuGrid = document.getElementById('cpu-grid');
+        const gpuGrid = document.getElementById('gpu-grid');
+        let isRunning = false;
+
+        function initGrid(element, type) {
+            element.innerHTML = '';
+            for (let i = 0; i < gridSize; i++) {
+                const div = document.createElement('div');
+                div.className = `w-full h-full bg-slate-600 rounded-sm pixel ${type}-pixel-${i}`;
+                element.appendChild(div);
+            }
+        }
+
+        initGrid(cpuGrid, 'cpu');
+        initGrid(gpuGrid, 'gpu');
+
+        // CPU 模擬邏輯
+        async function runCPU() {
+            const statusEl = document.getElementById('cpu-status');
+            const progressEl = document.getElementById('cpu-progress');
+            const core = document.getElementById('cpu-core-1');
+            
+            statusEl.innerText = "狀態: 正在計算邏輯與渲染...";
+            statusEl.className = "text-sm font-mono text-blue-400 animate-pulse";
+            
+            // 核心發光
+            core.classList.add('bg-blue-900', 'text-white', 'scale-105');
+            core.style.boxShadow = "0 0 20px #3b82f6";
+
+            const pixels = document.querySelectorAll('[class*="cpu-pixel-"]');
+            
+            // CPU 是一步一步做的 (Sequential)
+            // 為了視覺效果，我們讓它很快，但仍然是肉眼可見的順序
+            for (let i = 0; i < pixels.length; i++) {
+                if (!isRunning) break; // 中斷檢查
+
+                // 模擬處理中 (變黃)
+                pixels[i].classList.remove('bg-slate-600');
+                pixels[i].classList.add('processing');
+                
+                // 模擬運算時間 (CPU 單核很快，所以這裡延遲很短)
+                await new Promise(r => setTimeout(r, 20)); 
+
+                // 模擬完成 (變綠)
+                pixels[i].classList.remove('processing');
+                pixels[i].classList.add('finished');
+
+                // 更新進度條
+                progressEl.style.width = `${((i + 1) / gridSize) * 100}%`;
+            }
+
+            // 完成
+            if (isRunning) {
+                statusEl.innerText = "狀態: 任務完成";
+                statusEl.className = "text-sm font-mono text-green-400";
+                core.classList.remove('bg-blue-900', 'text-white', 'scale-105');
+                core.style.boxShadow = "";
+            }
+        }
+
+        // GPU 模擬邏輯
+        async function runGPU() {
+            const statusEl = document.getElementById('gpu-status');
+            const progressEl = document.getElementById('gpu-progress');
+            const pixels = document.querySelectorAll('[class*="gpu-pixel-"]');
+            
+            statusEl.innerText = "狀態: 載入數據至 VRAM...";
+            statusEl.className = "text-sm font-mono text-purple-400 animate-pulse";
+            
+            // 模擬一點點延遲 (啟動開銷)
+            await new Promise(r => setTimeout(r, 600));
+
+            if (!isRunning) return;
+
+            statusEl.innerText = "狀態: 平行運算中 (所有核心同時工作)";
+            
+            // GPU 是同時做的 (Parallel)
+            // 1. 全部變黃 (處理中)
+            pixels.forEach(p => {
+                p.classList.remove('bg-slate-600');
+                p.classList.add('processing');
+            });
+
+            // 模擬運算時間 (GPU 單核較慢，且要同步，所以等待時間比 CPU 單次操作長，但總體快)
+            await new Promise(r => setTimeout(r, 1500)); 
+
+            if (!isRunning) return;
+
+            // 2. 全部變綠 (完成)
+            pixels.forEach(p => {
+                p.classList.remove('processing');
+                p.classList.add('finished');
+            });
+            
+            progressEl.style.width = "100%";
+            statusEl.innerText = "狀態: 幀緩衝輸出完成";
+            statusEl.className = "text-sm font-mono text-green-400";
+        }
+
+        async function startSimulation(type) {
+            if (isRunning) return; // 防止重複點擊
+            isRunning = true;
+            
+            // 鎖定按鈕
+            document.getElementById('btn-cpu').disabled = true;
+            document.getElementById('btn-gpu').disabled = true;
+            document.getElementById('btn-cpu').classList.add('opacity-50');
+            document.getElementById('btn-gpu').classList.add('opacity-50');
+
+            if (type === 'cpu') {
+                await runCPU();
+            } else {
+                await runGPU();
+            }
+
+            isRunning = false;
+            // 解鎖按鈕 (如果不重置，允許再次運行會比較怪，但為了簡單UI，我們只在結束後解鎖重置按鈕邏輯)
+            // 這裡選擇讓用戶手動重置比較好
+        }
+
+        function resetAll() {
+            isRunning = false; // 強制停止循環
+            
+            // 重置 UI 狀態
+            document.getElementById('cpu-status').innerText = "狀態: 待機";
+            document.getElementById('cpu-status').className = "text-sm font-mono text-slate-300";
+            document.getElementById('cpu-progress').style.width = "0%";
+            
+            document.getElementById('gpu-status').innerText = "狀態: 待機";
+            document.getElementById('gpu-status').className = "text-sm font-mono text-slate-300";
+            document.getElementById('gpu-progress').style.width = "0%";
+
+            // 重置 Grid
+            initGrid(cpuGrid, 'cpu');
+            initGrid(gpuGrid, 'gpu');
+
+            // 重置 CPU 核心樣式
+            const core = document.getElementById('cpu-core-1');
+            core.classList.remove('bg-blue-900', 'text-white', 'scale-105');
+            core.style.boxShadow = "";
+
+            // 解鎖按鈕
+            document.getElementById('btn-cpu').disabled = false;
+            document.getElementById('btn-gpu').disabled = false;
+            document.getElementById('btn-cpu').classList.remove('opacity-50');
+            document.getElementById('btn-gpu').classList.remove('opacity-50');
+        }
+
+    </script>
+</body>
+</html>
