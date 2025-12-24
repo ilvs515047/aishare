@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主機板元件互動導覽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #1e293b; /* Slate 800 */
+            color: #f1f5f9;
+        }
+        
+        /* 主機板元件互動樣式 */
+        .component-group {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .component-group:hover path,
+        .component-group:hover rect,
+        .component-group:hover circle {
+            fill-opacity: 0.8;
+            stroke: #facc15; /* Yellow 400 */
+            stroke-width: 2;
+        }
+        .component-group.active path,
+        .component-group.active rect,
+        .component-group.active circle {
+            fill: #3b82f6; /* Blue 500 */
+            stroke: #60a5fa;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+        }
+
+        /* 說明面板動畫 */
+        #info-panel {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-8">
+
+    <header class="text-center mb-8">
+        <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">主機板元件構造詳解</h1>
+        <p class="text-slate-400">點擊主機板上的元件以查看詳細介紹</p>
+    </header>
+
+    <div class="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto w-full flex-1">
+        
+        <!-- 左側：SVG 主機板地圖 -->
+        <div class="flex-1 bg-slate-900 rounded-xl p-4 shadow-2xl border border-slate-700 flex items-center justify-center relative overflow-hidden">
+            <!-- 簡單的 SVG 主機板示意圖 -->
+            <svg viewBox="0 0 800 800" class="w-full h-full max-h-[700px] drop-shadow-xl select-none">
+                
+                <!-- PCB 底板 -->
+                <rect x="50" y="50" width="700" height="700" rx="20" fill="#334155" stroke="#475569" stroke-width="4" />
+                <text x="700" y="730" fill="#64748b" font-size="14" font-weight="bold" text-anchor="end">ATX MOTHERBOARD</text>
+
+                <!-- 1. CPU Socket (CPU 插槽) -->
+                <g class="component-group" onclick="showInfo('cpu_socket')" id="comp-cpu_socket">
+                    <rect x="300" y="200" width="180" height="180" fill="#cbd5e1" rx="5" />
+                    <rect x="320" y="220" width="140" height="140" fill="#94a3b8" rx="2" /> <!-- 扣具 -->
+                    <text x="390" y="295" fill="#334155" font-size="20" font-weight="bold" text-anchor="middle" pointer-events="none">CPU Socket</text>
+                </g>
+
+                <!-- 2. VRM & Heatsinks (供電模組) -->
+                <g class="component-group" onclick="showInfo('vrm')" id="comp-vrm">
+                    <path d="M280 180 L280 140 L500 140 L500 180" fill="#475569" /> <!-- Top VRM -->
+                    <path d="M240 200 L280 200 L280 380 L240 380" fill="#475569" /> <!-- Side VRM -->
+                    <text x="390" y="165" fill="#94a3b8" font-size="14" text-anchor="middle" pointer-events="none">VRM / Heatsink</text>
+                </g>
+
+                <!-- 3. RAM Slots (記憶體插槽) -->
+                <g class="component-group" onclick="showInfo('ram')" id="comp-ram">
+                    <rect x="520" y="180" width="20" height="240" fill="#1e293b" stroke="#64748b" />
+                    <rect x="550" y="180" width="20" height="240" fill="#1e293b" stroke="#64748b" />
+                    <rect x="580" y="180" width="20" height="240" fill="#1e293b" stroke="#64748b" />
+                    <rect x="610" y="180" width="20" height="240" fill="#1e293b" stroke="#64748b" />
+                    <text x="575" y="440" fill="#94a3b8" font-size="16" font-weight="bold" text-anchor="middle" pointer-events="none">DRAM Slots</text>
+                </g>
+
+                <!-- 4. ATX 24-Pin Power (主電源) -->
+                <g class="component-group" onclick="showInfo('atx24')" id="comp-atx24">
+                    <rect x="650" y="250" width="40" height="120" fill="#f8fafc" rx="2" />
+                    <rect x="655" y="255" width="13" height="110" fill="#000" opacity="0.2" />
+                    <rect x="672" y="255" width="13" height="110" fill="#000" opacity="0.2" />
+                    <text x="670" y="390" fill="#94a3b8" font-size="12" text-anchor="middle" pointer-events="none">24-Pin</text>
+                </g>
+
+                <!-- 5. CPU 8-Pin Power (CPU 電源) -->
+                <g class="component-group" onclick="showInfo('eps8')" id="comp-eps8">
+                    <rect x="100" y="80" width="80" height="40" fill="#f8fafc" rx="2" />
+                    <text x="140" y="70" fill="#94a3b8" font-size="12" text-anchor="middle" pointer-events="none">8-Pin CPU</text>
+                </g>
+
+                <!-- 6. PCIe x16 Slot (顯示卡插槽) -->
+                <g class="component-group" onclick="showInfo('pcie_x16')" id="comp-pcie_x16">
+                    <rect x="100" y="450" width="450" height="25" fill="#334155" stroke="#94a3b8" stroke-width="2" rx="2" />
+                    <rect x="520" y="448" width="30" height="29" fill="#334155" stroke="#94a3b8" stroke-width="2" /> <!-- 扣具 -->
+                    <text x="325" y="468" fill="#94a3b8" font-size="14" font-weight="bold" text-anchor="middle" pointer-events="none">PCIe 5.0 x16 (GPU)</text>
+                </g>
+
+                <!-- 7. PCIe x1 / x4 Slots (擴充插槽) -->
+                <g class="component-group" onclick="showInfo('pcie_others')" id="comp-pcie_others">
+                    <rect x="100" y="550" width="200" height="20" fill="#1e293b" stroke="#475569" rx="2" />
+                    <rect x="100" y="650" width="450" height="20" fill="#1e293b" stroke="#475569" rx="2" />
+                    <text x="200" y="565" fill="#64748b" font-size="12" text-anchor="middle" pointer-events="none">PCIe x1</text>
+                </g>
+
+                <!-- 8. M.2 Slots (SSD 插槽) -->
+                <g class="component-group" onclick="showInfo('m2')" id="comp-m2">
+                    <rect x="150" y="410" width="160" height="30" fill="#475569" rx="2" /> <!-- M.2_1 -->
+                    <circle cx="300" cy="425" r="4" fill="#cbd5e1" />
+                    <rect x="150" y="600" width="160" height="30" fill="#475569" rx="2" /> <!-- M.2_2 -->
+                    <circle cx="300" cy="615" r="4" fill="#cbd5e1" />
+                    <text x="230" y="430" fill="#cbd5e1" font-size="12" font-weight="bold" text-anchor="middle" pointer-events="none">M.2 SSD</text>
+                </g>
+
+                <!-- 9. Chipset / PCH (南橋晶片組) -->
+                <g class="component-group" onclick="showInfo('chipset')" id="comp-chipset">
+                    <rect x="450" y="580" width="120" height="100" fill="#1e293b" stroke="#64748b" stroke-width="2" rx="5" />
+                    <text x="510" y="635" fill="#64748b" font-size="16" font-weight="bold" text-anchor="middle" pointer-events="none">Chipset</text>
+                </g>
+
+                <!-- 10. SATA Ports (SATA 接口) -->
+                <g class="component-group" onclick="showInfo('sata')" id="comp-sata">
+                    <rect x="680" y="550" width="40" height="80" fill="#1e293b" stroke="#64748b" />
+                    <rect x="685" y="555" width="30" height="15" fill="#000" />
+                    <rect x="685" y="575" width="30" height="15" fill="#000" />
+                    <rect x="685" y="595" width="30" height="15" fill="#000" />
+                    <rect x="685" y="615" width="30" height="15" fill="#000" />
+                    <text x="660" y="595" fill="#64748b" font-size="12" text-anchor="end" pointer-events="none">SATA</text>
+                </g>
+
+                <!-- 11. Rear I/O (背板介面) -->
+                <g class="component-group" onclick="showInfo('io_panel')" id="comp-io_panel">
+                    <rect x="50" y="150" width="60" height="250" fill="#94a3b8" />
+                    <text x="80" y="275" fill="#1e293b" font-size="14" font-weight="bold" transform="rotate(-90, 80, 275)" text-anchor="middle" pointer-events="none">Rear I/O Panel</text>
+                </g>
+
+                <!-- 12. CMOS Battery (BIOS 電池) -->
+                <g class="component-group" onclick="showInfo('cmos')" id="comp-cmos">
+                    <circle cx="400" cy="520" r="15" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2" />
+                    <text x="400" y="524" fill="#64748b" font-size="8" text-anchor="middle" pointer-events="none">CR2032</text>
+                </g>
+
+                <!-- 13. Front Panel Headers (前置面板針腳) -->
+                <g class="component-group" onclick="showInfo('f_panel')" id="comp-f_panel">
+                    <rect x="600" y="710" width="100" height="20" fill="#000" />
+                    <circle cx="610" cy="720" r="2" fill="gold" />
+                    <circle cx="620" cy="720" r="2" fill="gold" />
+                    <circle cx="630" cy="720" r="2" fill="gold" />
+                    <text x="650" y="705" fill="#64748b" font-size="12" text-anchor="middle" pointer-events="none">F_PANEL</text>
+                </g>
+
+            </svg>
+        </div>
+
+        <!-- 右側：資訊面板 -->
+        <div class="lg:w-1/3 w-full flex flex-col">
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 h-full shadow-xl relative overflow-hidden">
+                
+                <!-- 預設顯示 -->
+                <div id="default-msg" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-slate-500">
+                    <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    <p class="text-lg">請點擊左側主機板圖上的任意區塊<br>以查看詳細介紹</p>
+                </div>
+
+                <!-- 詳細資訊容器 -->
+                <div id="info-content" class="hidden h-full flex flex-col">
+                    <div class="mb-4">
+                        <span id="info-category" class="text-xs font-bold px-2 py-1 rounded bg-blue-900 text-blue-300 uppercase tracking-wide">Component</span>
+                    </div>
+                    <h2 id="info-title" class="text-2xl md:text-3xl font-bold text-white mb-4 border-b border-slate-600 pb-2">元件名稱</h2>
+                    
+                    <div class="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                        <div>
+                            <h3 class="text-lg font-semibold text-yellow-400 mb-1">功能介紹</h3>
+                            <p id="info-desc" class="text-slate-300 leading-relaxed">這裡會顯示該元件的功能描述...</p>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-blue-400 mb-1">小知識</h3>
+                            <ul id="info-tips" class="list-disc list-inside text-slate-400 text-sm space-y-1">
+                                <li>Tip 1</li>
+                                <li>Tip 2</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 頁腳 -->
+    <div class="text-center mt-8 text-slate-500 text-sm">
+        <p>互動式教學指南 - 專為硬體入門設計</p>
+    </div>
+
+    <script>
+        // 元件資料庫
+        const componentsData = {
+            'cpu_socket': {
+                category: "核心接口",
+                title: "CPU 插槽 (Socket)",
+                desc: "這是安裝中央處理器 (CPU) 的地方。不同品牌的 CPU (Intel/AMD) 或不同世代通常需要不同的插槽類型（例如 LGA1700, AM5）。插槽上有數千個微小的金屬針腳或觸點，負責傳輸數據和電力。",
+                tips: [
+                    "安裝時要非常小心，針腳歪掉可能導致整張主機板報廢。",
+                    "通常有防呆設計（缺口），請對準 CPU 上的標記。",
+                    "LGA (Land Grid Array)：針腳在主機板上 (Intel 主流)。",
+                    "PGA (Pin Grid Array)：針腳在 CPU 上 (舊款 AMD)。"
+                ]
+            },
+            'ram': {
+                category: "記憶體",
+                title: "DRAM 插槽 (DIMM Slots)",
+                desc: "用來安裝隨機存取記憶體 (RAM)。這是電腦的「短期記憶」，CPU 正在處理的數據會暫存在這裡。目前主流規格為 DDR4 和 DDR5。雙通道 (Dual Channel) 技術可以提升速度，通常建議將兩條記憶體插在間隔的插槽（如 2 和 4）。",
+                tips: [
+                    "記憶體有防呆缺口，插反了是插不進去的，請勿硬壓。",
+                    "安裝時聽到「喀」一聲才算卡緊。",
+                    "DDR4 和 DDR5 的缺口位置不同，無法混用。"
+                ]
+            },
+            'vrm': {
+                category: "供電系統",
+                title: "VRM 供電模組",
+                desc: "VRM (Voltage Regulator Module) 負責將電源供應器的 12V 電壓，精準地轉換成 CPU 所需的低電壓 (約 1.0V ~ 1.4V)。這就像是電腦的變電所。高效能的主機板會有更多相數的供電和大型散熱片 (Heatsink)，確保 CPU 在高負載下穩定運作。",
+                tips: [
+                    "VRM 上的散熱片非常重要，運作時溫度很高，請勿觸摸。",
+                    "「相數」越多，通常代表供電越穩定，適合超頻。"
+                ]
+            },
+            'pcie_x16': {
+                category: "擴充介面",
+                title: "PCIe x16 插槽",
+                desc: "最長的擴充插槽，通常位於最上方，擁有完整的 16 條通道頻寬。這幾乎總是預留給**獨立顯示卡 (GPU)** 使用的，因為顯卡需要最大的數據傳輸量直接與 CPU 溝通。",
+                tips: [
+                    "現在最新的標準是 PCIe 4.0 或 5.0。",
+                    "拆卸顯卡時，記得按下插槽尾端的塑膠卡扣，否則會拔壞插槽。"
+                ]
+            },
+            'pcie_others': {
+                category: "擴充介面",
+                title: "PCIe x1 / x4 插槽",
+                desc: "較短的插槽，用於安裝不需要那麼大頻寬的擴充卡。例如：獨立音效卡、Wi-Fi 網卡、影像擷取卡或額外的 USB 擴充卡。",
+                tips: [
+                    "有些長度看似 x16 的插槽，內部針腳可能只有 x4 頻寬。",
+                    "如果主機板內建功能夠強（如已有 Wi-Fi），這些插槽可能用不到。"
+                ]
+            },
+            'm2': {
+                category: "儲存裝置",
+                title: "M.2 SSD 插槽",
+                desc: "用於安裝高速 NVMe SSD (固態硬碟)。M.2 SSD 體積小，直接鎖在主機板上，不需要連接線。透過 PCIe 通道傳輸，速度遠快於傳統 SATA SSD。",
+                tips: [
+                    "有些 M.2 插槽會配備散熱片 (Thermal Guard)，記得撕掉導熱貼上的膠膜。",
+                    "安裝螺絲非常小，容易遺失，請小心保管。",
+                    "分為不同長度規格，最常見的是 2280。"
+                ]
+            },
+            'chipset': {
+                category: "核心控制",
+                title: "晶片組 (Chipset / PCH)",
+                desc: "如果 CPU 是大腦，晶片組就像是脊髓或神經中樞。它負責管理較慢速的 I/O 裝置（如 USB、SATA 硬碟、音效、網卡）並將數據彙整傳送給 CPU。通常覆蓋在右下角的散熱片下方。",
+                tips: [
+                    "晶片組型號決定了主機板的等級 (如 Intel Z790 vs B760)。",
+                    "高階晶片組通常支援更多 USB 孔、更多 PCIe 通道和超頻功能。"
+                ]
+            },
+            'sata': {
+                category: "儲存裝置",
+                title: "SATA 接口",
+                desc: "用於連接傳統的 2.5 吋 SSD 或 3.5 吋機械硬碟 (HDD)。雖然速度不如 M.2 NVMe，但價格便宜且容量大，適合用來儲存大量檔案。",
+                tips: [
+                    "L 型接頭設計，有防呆功能。",
+                    "SATA 線材容易受氣流干擾，整線時建議綁好。"
+                ]
+            },
+            'atx24': {
+                category: "電源",
+                title: "24-Pin ATX 主電源",
+                desc: "主機板最大的一個插座。它從電源供應器 (PSU) 接收電力，並分配給主機板上的各個元件（記憶體、晶片組、PCIe 卡等，除了 CPU 以外的大部分元件）。",
+                tips: [
+                    "插頭很大且緊，拔插時需要按住卡扣並稍微左右搖晃。",
+                    "一定要插到底，否則電腦無法開機。"
+                ]
+            },
+            'eps8': {
+                category: "電源",
+                title: "8-Pin CPU 電源 (EPS)",
+                desc: "通常位於左上角。這個接口專門為 CPU 提供 12V 電力。高階主機板可能會有兩個 8-Pin 接口 (8+8)，以應付高階 CPU 超頻時的巨大耗電量。",
+                tips: [
+                    "請勿將顯卡的 PCIe 8-Pin 電源線誤插到這裡（防呆形狀不同，但硬插會損壞）。",
+                    "一定要接，否則風扇會轉但螢幕無畫面。"
+                ]
+            },
+            'io_panel': {
+                category: "外部接口",
+                title: "背板 I/O (Rear I/O)",
+                desc: "位於主機後方，提供各種連接埠。常見包括：USB (Type-A/C)、乙太網路孔 (LAN)、音源孔、HDMI/DP (內顯輸出) 以及 Wi-Fi 天線接頭。",
+                tips: [
+                    "許多現代主機板已預裝擋板 (Integrated I/O Shield)，安裝更方便。",
+                    "不同顏色的 USB 孔通常代表不同速度 (藍色/紅色通常較快)。"
+                ]
+            },
+            'cmos': {
+                category: "系統維護",
+                title: "CMOS 電池 (CR2032)",
+                desc: "這顆鈕扣電池負責在電腦斷電時，維持 BIOS/UEFI 的設定值（如系統時間、開機順序）。如果電池沒電，每次開機時間都會重置。",
+                tips: [
+                    "如果電腦開機有問題，拔掉電源並取出這顆電池等待 1 分鐘，可以「重置 BIOS」設定 (Clear CMOS)。"
+                ]
+            },
+            'f_panel': {
+                category: "機殼連接",
+                title: "前置面板針腳 (F_PANEL)",
+                desc: "這是新手最頭痛的地方。用來連接機殼上的電源鍵 (Power SW)、重開機鍵 (Reset SW)、硬碟指示燈 (HDD LED) 和電源燈 (Power LED)。",
+                tips: [
+                    "正負極接反通常只會導致燈不亮，不會損壞硬體。",
+                    "Power Switch (開關) 沒有正負極之分。",
+                    "請參閱主機板說明書或板上的微小印刷文字來確認位置。"
+                ]
+            }
+        };
+
+        const infoContent = document.getElementById('info-content');
+        const defaultMsg = document.getElementById('default-msg');
+        
+        // 顯示資訊函式
+        function showInfo(id) {
+            const data = componentsData[id];
+            if (!data) return;
+
+            // UI 狀態切換
+            defaultMsg.classList.add('hidden');
+            infoContent.classList.remove('hidden');
+
+            // 移除舊的 active class
+            document.querySelectorAll('.component-group').forEach(el => el.classList.remove('active'));
+            // 加入新的 active class
+            const activeEl = document.getElementById(`comp-${id}`);
+            if(activeEl) activeEl.classList.add('active');
+
+            // 填入內容
+            document.getElementById('info-category').innerText = data.category;
+            document.getElementById('info-title').innerText = data.title;
+            document.getElementById('info-desc').innerText = data.desc;
+
+            // 填入 Tips
+            const tipsList = document.getElementById('info-tips');
+            tipsList.innerHTML = '';
+            data.tips.forEach(tip => {
+                const li = document.createElement('li');
+                li.innerText = tip;
+                tipsList.appendChild(li);
+            });
+
+            // 手機版自動捲動到資訊區
+            if (window.innerWidth < 1024) {
+                infoContent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    </script>
+</body>
+</html>
