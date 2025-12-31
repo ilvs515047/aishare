@@ -326,7 +326,7 @@
             </div>
         </div>
 
-        <!-- 第三層: 寶相花與金元寶 -->
+        <!-- 第三層: 裝飾 (寶相花與金元寶) -->
         <div class="layer layer-3-decor">
             <!-- 頂部寶相花紋 (裝飾性線條) -->
             <svg class="svg-icon flower-top" viewBox="0 0 200 100">
@@ -436,8 +436,9 @@
 
             // 層次移動
             layers.forEach(layer => {
-                const translateX = y * layer.factor * 1.5; 
-                const translateY = -x * layer.factor * 1.5;
+                // 將位移係數從 1.5 降為 0.8，減少移動幅度
+                const translateX = y * layer.factor * 0.8; 
+                const translateY = -x * layer.factor * 0.8;
                 layer.el.style.transform = `translateZ(${layer.z}px) translateX(${translateX}px) translateY(${translateY}px)`;
             });
 
@@ -461,10 +462,11 @@
         document.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth - 0.5) * 2; 
             const y = (e.clientY / window.innerHeight - 0.5) * 2; 
-            handleMove(y * 15, x * 15);
+            // 將滑鼠係數從 15 降為 10，保持一致的平穩感
+            handleMove(y * 10, x * 10);
         });
 
-        // 重力感應初始化 (移除按鈕觸發)
+        // 重力感應初始化
         function initSensor() {
             if (window.DeviceOrientationEvent) {
                 window.addEventListener('deviceorientation', handleOrientation);
@@ -480,8 +482,9 @@
             if (x < -90) x = -90;
             
             // 手機通常是拿在手上約45度角，所以我們減去45做校正
+            // 將輸入角度乘上 0.5，降低敏感度
             if (x !== null && y !== null) {
-                handleMove(x - 45, y); 
+                handleMove((x - 45) * 0.5, y * 0.5); 
             }
         }
 
