@@ -16,6 +16,8 @@
             --liuli-bg: linear-gradient(180deg, #5d0000 0%, #800000 50%, #3e0000 100%);
             /* 翡翠綠點綴 */
             --jade-accent: #006b3e;
+            /* 立體文字側面顏色 (深金/古銅) */
+            --gold-side: #5e3000;
         }
 
         body {
@@ -185,29 +187,52 @@
         /* 替換原本的 horse-container 為成語區塊 */
         .idiom-container {
             margin-bottom: 20px;
-            transform: translateZ(20px);
+            transform: translateZ(40px); /* 提升高度 */
+            transform-style: preserve-3d;
         }
 
         .idiom-text {
             font-family: 'Ma Shan Zheng', cursive;
-            font-size: 5rem; /* 字體加大 */
+            font-size: 5rem; 
             line-height: 1.2;
             margin: 0;
+            text-align: center;
+            letter-spacing: 5px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+        
+        /* 立體文字樣式 
+           原本的 .idiom-text 樣式被 js 動態生成的結構取代 
+           這裡定義基礎外觀
+        */
+        .text-3d-wrapper {
+            position: relative;
+            display: inline-block;
+            transform-style: preserve-3d;
+        }
+
+        .text-layer {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            color: var(--gold-side); /* 側面顏色 */
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .text-layer-front {
+            position: relative; /* 讓它撐開容器 */
             background: var(--gold-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            /* 更強烈的浮雕與陰影效果，模擬金字匾額 */
-            filter: drop-shadow(0 4px 0px #8B4500) drop-shadow(0 10px 15px rgba(0,0,0,0.6));
-            text-align: center;
-            letter-spacing: 5px;
-            /* 豎排或是分行設計 */
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* 將成語分為兩行顯示，更有氣勢 */
-        .idiom-row {
-            display: block;
+            color: transparent; /* Fallback */
+            z-index: 10;
         }
 
         /* 燿華文字區 */
@@ -218,18 +243,17 @@
             border-top: 2px solid rgba(255,215,0,0.3);
             padding-top: 20px;
             width: 70%;
+            transform-style: preserve-3d;
+            transform: translateZ(20px);
         }
 
         .main-text {
-            font-size: 2.2rem; /* 稍微縮小公司名稱，凸顯成語 */
+            font-size: 2.2rem;
             line-height: 1.2;
             margin: 0;
             font-family: 'Ma Shan Zheng', cursive;
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 1px 0px #8B4500) drop-shadow(0 2px 5px rgba(0,0,0,0.5));
-            transform: translateZ(10px);
+            position: relative;
+            transform-style: preserve-3d;
         }
 
         .seal-mark {
@@ -249,6 +273,7 @@
             font-family: 'Noto Serif TC', serif;
             box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
             transform: rotate(15deg);
+            transform: translateZ(10px); /* 印章也浮起 */
         }
 
         .sub-text-container {
@@ -257,6 +282,7 @@
             background: linear-gradient(90deg, transparent, rgba(0,0,0,0.4), transparent);
             padding: 5px 30px;
             border-radius: 20px;
+            transform: translateZ(5px);
         }
 
         .sub-text {
@@ -391,15 +417,15 @@
         <div class="layer layer-1-text">
             
             <div class="idiom-container">
-                <h1 class="idiom-text">
-                    <span class="idiom-row">馬到</span>
-                    <span class="idiom-row">成功</span>
-                </h1>
+                <div class="idiom-text">
+                    <span class="idiom-row to-3d" data-depth="6">馬到</span>
+                    <span class="idiom-row to-3d" data-depth="6">成功</span>
+                </div>
             </div>
 
             <div class="text-plaque">
                 <div class="seal-mark">福</div>
-                <h2 class="main-text" id="greetingText">燿華<br>新年快樂</h2>
+                <h2 class="main-text to-3d" id="greetingText" data-depth="4">燿華<br>新年快樂</h2>
                 <div class="sub-text-container">
                     <div class="sub-text">Happy New Year</div>
                 </div>
@@ -413,9 +439,7 @@
 
     <script>
         const cardContainer = document.getElementById('cardContainer');
-        const greetingText = document.getElementById('greetingText');
         const shineLayer = document.getElementById('shineLayer');
-        const idiomText = document.querySelector('.idiom-text');
 
         // 定義層級參數 (加強景深)
         const layers = [
@@ -425,8 +449,35 @@
             { el: document.querySelector('.layer-4-base'), z: 0, factor: 0 },
         ];
 
+        // 3D 文字生成函數
+        function create3DText() {
+            const elements = document.querySelectorAll('.to-3d');
+            
+            elements.forEach(el => {
+                const text = el.innerHTML; // 獲取原始文字/HTML
+                const depth = parseInt(el.getAttribute('data-depth')) || 5; // 層數
+                const step = 1.5; // 每層的距離 px
+                
+                let layersHTML = '';
+                
+                // 生成背面/側面層 (深色)
+                for (let i = depth; i > 0; i--) {
+                    layersHTML += `<span class="text-layer" style="transform: translateZ(-${i * step}px); text-shadow: -1px -1px 2px rgba(0,0,0,0.5);">${text}</span>`;
+                }
+                
+                // 生成正面層 (亮金色)
+                layersHTML += `<span class="text-layer-front">${text}</span>`;
+                
+                // 包裝
+                el.innerHTML = `<span class="text-3d-wrapper">${layersHTML}</span>`;
+            });
+        }
+
+        // 執行 3D 文字生成
+        create3DText();
+
         function handleMove(x, y) {
-            const maxRotate = 20; // 稍微減少旋轉角度以保持穩重感
+            const maxRotate = 20; 
             let rotateX = -x; 
             let rotateY = y;
             rotateX = Math.max(-maxRotate, Math.min(maxRotate, rotateX));
@@ -436,22 +487,17 @@
 
             // 層次移動
             layers.forEach(layer => {
-                // 將位移係數從 1.5 降為 0.8，減少移動幅度
                 const translateX = y * layer.factor * 0.8; 
                 const translateY = -x * layer.factor * 0.8;
                 layer.el.style.transform = `translateZ(${layer.z}px) translateX(${translateX}px) translateY(${translateY}px)`;
             });
 
-            // 文字光影變化
-            const shadowX = rotateY * 1.5; 
-            const shadowY = -rotateX * 1.5; 
-            const shadowStyle = `${shadowX}px ${shadowY}px 10px rgba(0,0,0,0.6)`;
-            
-            greetingText.style.textShadow = shadowStyle;
-            idiomText.style.filter = `drop-shadow(0 4px 0px #8B4500) drop-shadow(${shadowX}px ${shadowY}px 15px rgba(0,0,0,0.6))`;
+            // 更新 3D 文字的陰影方向，讓它看起來更真實
+            // 這裡不再使用 text-shadow 做主要立體感，而是用來增強最底層的陰影
+            const shadowX = rotateY * 2; 
+            const shadowY = -rotateX * 2;
             
             // 全局光澤流動
-            // 計算角度對應的光澤位置
             const bgX = 50 + (y * 2);
             const bgY = 50 + (x * 2);
             shineLayer.style.background = `radial-gradient(circle at ${bgX}% ${bgY}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)`;
@@ -462,7 +508,6 @@
         document.addEventListener('mousemove', (e) => {
             const x = (e.clientX / window.innerWidth - 0.5) * 2; 
             const y = (e.clientY / window.innerHeight - 0.5) * 2; 
-            // 將滑鼠係數從 15 降為 10，保持一致的平穩感
             handleMove(y * 10, x * 10);
         });
 
@@ -474,21 +519,17 @@
         }
 
         function handleOrientation(event) {
-            let x = event.beta;  // 前後傾斜 [-180, 180]
-            let y = event.gamma; // 左右傾斜 [-90, 90]
+            let x = event.beta;
+            let y = event.gamma; 
             
-            // 限制角度範圍以免翻轉過度
             if (x > 90) x = 90;
             if (x < -90) x = -90;
             
-            // 手機通常是拿在手上約45度角，所以我們減去45做校正
-            // 將輸入角度乘上 0.5，降低敏感度
             if (x !== null && y !== null) {
                 handleMove((x - 45) * 0.5, y * 0.5); 
             }
         }
 
-        // 頁面載入即啟動
         window.onload = initSensor;
 
     </script>
