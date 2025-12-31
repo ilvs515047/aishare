@@ -3,15 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 重力感應賀卡 - 燿華新年</title>
+    <title>3D 重力感應賀卡 - 燿華新年 (馬到成功版)</title>
+    <!-- 引入古典書法字體 -->
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --card-width: 320px;
-            --card-height: 480px;
-            --primary-gold: #ffd700;
-            --secondary-gold: #cfb53b;
-            /* 華麗的深紅至暗夜黑漸層 */
-            --bg-gradient: linear-gradient(135deg, #4a0404 0%, #200101 50%, #000000 100%);
+            --card-width: 340px;
+            --card-height: 520px;
+            /* 真金漸層 */
+            --gold-gradient: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
+            /* 琉璃紅背景 - 深邃且有層次 */
+            --liuli-bg: linear-gradient(180deg, #5d0000 0%, #800000 50%, #3e0000 100%);
+            /* 翡翠綠點綴 */
+            --jade-accent: #006b3e;
         }
 
         body {
@@ -22,68 +26,31 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #050505;
-            background-image: radial-gradient(circle at center, #1a0505 0%, #000 100%);
-            font-family: 'Noto Serif TC', serif;
+            /* 萬字紋背景 */
+            background-color: #1a0505;
+            background-image: 
+                radial-gradient(#4a0e0e 15%, transparent 16%),
+                radial-gradient(#4a0e0e 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            font-family: 'Ma Shan Zheng', cursive; /* 使用書法字體 */
             overflow: hidden;
-            perspective: 1200px; /* 視角拉遠一點，讓層次感更明顯 */
+            perspective: 1200px;
         }
 
-        /* 權限按鈕遮罩 */
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: var(--primary-gold);
-            text-align: center;
-            transition: opacity 0.5s;
-        }
-
-        #start-btn {
-            padding: 15px 40px;
-            background: linear-gradient(45deg, var(--secondary-gold), var(--primary-gold));
-            color: #2b0a0a;
-            border: none;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-            margin-top: 20px;
-        }
-
-        /* 卡片容器 */
         .card-container {
             width: var(--card-width);
             height: var(--card-height);
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
+            animation: intro-float 1.5s ease-out; /* 進場動畫 */
         }
 
-        /* 卡片本體 */
-        .card {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            background: var(--bg-gradient);
-            border-radius: 20px;
-            /* 多重陰影增加厚度感 */
-            box-shadow: 
-                0 30px 50px rgba(0,0,0,0.8), 
-                0 0 0 2px rgba(255, 215, 0, 0.1) inset;
-            transform-style: preserve-3d;
+        @keyframes intro-float {
+            0% { transform: translateY(50px) rotateX(10deg); opacity: 0; }
+            100% { transform: translateY(0) rotateX(0); opacity: 1; }
         }
 
-        /* 通用層級設定 */
         .layer {
             position: absolute;
             top: 0;
@@ -91,306 +58,436 @@
             width: 100%;
             height: 100%;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             transform-style: preserve-3d;
             pointer-events: none;
+            will-change: transform;
         }
 
-        /* --- 各層詳細設定 (Z軸深度不同) --- */
+        /* --- 第四層: 卡片底層 (宮廷琉璃座) --- */
+        .layer-4-base { z-index: 1; }
+        
+        .base-card {
+            width: 100%;
+            height: 100%;
+            background: var(--liuli-bg);
+            border-radius: 15px; /* 稍微方正一點，更有匾額感 */
+            /* 模擬厚重琉璃邊框 */
+            box-shadow: 
+                0 40px 80px rgba(0,0,0,0.8), 
+                inset 0 0 30px rgba(0,0,0, 0.8),
+                0 0 0 2px #5d0000,
+                0 0 0 6px #b38728; 
+            overflow: hidden;
+            position: relative;
+        }
 
-        /* 1. 深背景層：星光與遠景 */
-        .layer.deep-bg {
-            transform: translateZ(-60px) scale(0.9);
+        /* 底部紋理 - 古典回紋 */
+        .base-pattern {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background-image: repeating-linear-gradient(45deg, rgba(255,215,0,0.03) 0px, rgba(255,215,0,0.03) 2px, transparent 2px, transparent 10px);
             opacity: 0.6;
         }
 
-        /* 2. 背景裝飾層：幾何圖形 */
-        .layer.back-deco {
-            transform: translateZ(-30px);
-        }
-        
-        .deco-ring {
-            position: absolute;
-            border: 1px dashed rgba(255, 215, 0, 0.2);
-            border-radius: 50%;
-            animation: spin 60s linear infinite;
-        }
-
-        /* 3. 文字層：主要訊息 */
-        .layer.text {
-            transform: translateZ(40px);
-            z-index: 10;
-        }
-
-        .greeting-container {
-            text-align: center;
-            /* 文字邊框光暈 */
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 215, 0, 0.1);
-            backdrop-filter: blur(2px);
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .greeting-main {
-            font-size: 3.2rem;
-            margin: 0;
-            font-weight: 900;
-            line-height: 1.2;
-            /* 燙金字體效果 */
-            background: linear-gradient(to bottom, #fff5c3 0%, #dbb055 40%, #a07218 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            /* 備用陰影 */
-            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
-        }
-
-        .greeting-sub {
-            color: #e0e0e0;
-            font-size: 1rem;
-            margin-top: 15px;
-            letter-spacing: 4px;
-            font-family: sans-serif;
-            text-transform: uppercase;
-        }
-
-        /* 4. 懸浮層：金粉與碎片 */
-        .layer.particles {
-            transform: translateZ(80px);
-        }
-
-        .gold-speck {
-            position: absolute;
-            background: var(--primary-gold);
-            border-radius: 50%;
-            box-shadow: 0 0 5px var(--primary-gold);
-            opacity: 0.8;
-        }
-
-        /* 5. 外框層：最上層裝飾 */
-        .layer.frame {
-            transform: translateZ(100px);
-            pointer-events: none;
-        }
-
+        /* 金屬邊框裝飾 */
         .border-deco {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
+            top: 10px; left: 10px; right: 10px; bottom: 10px;
             border: 2px solid rgba(255, 215, 0, 0.4);
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
         }
         
-        .corner {
+        .corner-deco {
             position: absolute;
             width: 40px;
             height: 40px;
-            border-color: var(--primary-gold);
-            border-style: solid;
-            transition: all 0.3s;
+            background: transparent;
+            border: 4px solid #ffd700;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+        }
+        .tl { top: 15px; left: 15px; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+        .tr { top: 15px; right: 15px; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+        .bl { bottom: 15px; left: 15px; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+        .br { bottom: 15px; right: 15px; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+
+        /* --- 第三層: 裝飾 (寶相花與金元寶) --- */
+        .layer-3-decor { z-index: 2; }
+
+        .svg-icon {
+            position: absolute;
+            /* 強烈的金屬陰影 */
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.6));
+        }
+
+        /* 寶相花動畫 */
+        .flower-spin { animation: slow-spin 20s linear infinite; }
+        
+        .flower-top { top: -20px; left: 50%; transform: translateX(-50%); width: 180px; height: 100px; opacity: 0.8; }
+        .flower-bl { bottom: 40px; left: -10px; width: 100px; height: 100px; }
+        .flower-tr { top: 40px; right: -10px; width: 90px; height: 90px; }
+        
+        /* 寫實金元寶 */
+        .ingot-gold-l { bottom: 20px; left: 20px; width: 70px; height: 50px; animation: float 3s ease-in-out infinite; }
+        .ingot-gold-r { bottom: 30px; right: 20px; width: 60px; height: 45px; animation: float 3s ease-in-out infinite 1.5s; }
+
+        /* --- 第二層: 祥雲圓窗 --- */
+        .layer-2-pattern { z-index: 3; }
+
+        .moon-gate {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            /* 模擬玉璧/琉璃質感 */
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.5);
+            background: radial-gradient(circle, rgba(255,215,0,0.05) 0%, transparent 70%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
         
-        /* 四角裝飾 */
-        .corner.tl { top: 15px; left: 15px; border-width: 3px 0 0 3px; border-radius: 10px 0 0 0; }
-        .corner.tr { top: 15px; right: 15px; border-width: 3px 3px 0 0; border-radius: 0 10px 0 0; }
-        .corner.bl { bottom: 15px; left: 15px; border-width: 0 0 3px 3px; border-radius: 0 0 0 10px; }
-        .corner.br { bottom: 15px; right: 15px; border-width: 0 3px 3px 0; border-radius: 0 0 10px 0; }
-
-        /* 光澤層 */
-        .shine {
+        .moon-gate::after {
+            content: '';
             position: absolute;
-            top: 0;
-            left: 0;
+            top: -5px; left: -5px; right: -5px; bottom: -5px;
+            border-radius: 50%;
+            border: 1px dashed #ffd700;
+            animation: spin 30s linear infinite;
+        }
+
+        .cloud-svg {
+            position: absolute;
+            width: 140px;
+            opacity: 0.9;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        .cloud-1 { top: 15%; left: -20px; transform: rotate(-10deg); animation: drift 6s ease-in-out infinite alternate; }
+        .cloud-2 { bottom: 20%; right: -20px; transform: rotate(10deg) scaleX(-1); animation: drift 7s ease-in-out infinite alternate-reverse; }
+
+        /* --- 第一層: 核心 (成語與燿華題字) --- */
+        .layer-1-text { 
+            z-index: 4; 
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding-top: 20px;
+        }
+
+        /* 替換原本的 horse-container 為成語區塊 */
+        .idiom-container {
+            margin-bottom: 20px;
+            transform: translateZ(20px);
+        }
+
+        .idiom-text {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 5rem; /* 字體加大 */
+            line-height: 1.2;
+            margin: 0;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* 更強烈的浮雕與陰影效果，模擬金字匾額 */
+            filter: drop-shadow(0 4px 0px #8B4500) drop-shadow(0 10px 15px rgba(0,0,0,0.6));
+            text-align: center;
+            letter-spacing: 5px;
+            /* 豎排或是分行設計 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 將成語分為兩行顯示，更有氣勢 */
+        .idiom-row {
+            display: block;
+        }
+
+        /* 燿華文字區 */
+        .text-plaque {
+            position: relative;
+            text-align: center;
+            margin-top: 10px;
+            border-top: 2px solid rgba(255,215,0,0.3);
+            padding-top: 20px;
+            width: 70%;
+        }
+
+        .main-text {
+            font-size: 2.2rem; /* 稍微縮小公司名稱，凸顯成語 */
+            line-height: 1.2;
+            margin: 0;
+            font-family: 'Ma Shan Zheng', cursive;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 1px 0px #8B4500) drop-shadow(0 2px 5px rgba(0,0,0,0.5));
+            transform: translateZ(10px);
+        }
+
+        .seal-mark {
+            position: absolute;
+            top: 20px;
+            right: -10px;
+            width: 30px;
+            height: 30px;
+            background: #a30000;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.3);
+            font-family: 'Noto Serif TC', serif;
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+            transform: rotate(15deg);
+        }
+
+        .sub-text-container {
+            margin-top: 10px;
+            display: inline-block;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.4), transparent);
+            padding: 5px 30px;
+            border-radius: 20px;
+        }
+
+        .sub-text {
+            color: #fcf6ba;
+            font-family: 'Noto Serif TC', serif;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            text-transform: uppercase;
+        }
+
+        /* 光效層 */
+        .shine-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 60%);
+            background-size: 200% 200%;
+            border-radius: 15px;
+            mix-blend-mode: overlay;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        /* 粒子特效 (金粉) */
+        .particles {
+            position: absolute;
             width: 100%;
             height: 100%;
-            background: linear-gradient(
-                120deg,
-                rgba(255,255,255,0) 30%,
-                rgba(255,255,255,0.15) 50%,
-                rgba(255,255,255,0) 70%
-            );
-            transform: translateZ(1px);
-            z-index: 20;
-            mix-blend-mode: overlay;
+            z-index: 5;
+            background-image: 
+                radial-gradient(#ffd700 1px, transparent 1px),
+                radial-gradient(#fff 1px, transparent 1px);
+            background-size: 40px 40px, 30px 30px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.4;
+            animation: sparkle 4s linear infinite;
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes slow-spin { 100% { transform: translateX(-50%) rotate(360deg); } }
+        @keyframes drift { 0% { transform: translateX(0); } 100% { transform: translateX(15px); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes sparkle {
+            0% { background-position: 0 0, 15px 15px; opacity: 0.3; }
+            50% { opacity: 0.6; }
+            100% { background-position: 0 40px, 15px 55px; opacity: 0.3; }
         }
 
     </style>
 </head>
 <body>
 
-    <div id="overlay">
-        <h2>✨ 華麗 3D 新年賀卡 ✨</h2>
-        <p>晃動手機體驗視差立體效果</p>
-        <button id="start-btn">開啟賀卡</button>
-    </div>
-
     <div class="card-container" id="cardContainer">
-        <div class="card" id="card">
+        
+        <!-- 第四層: 琉璃紅底 + 回紋 -->
+        <div class="layer layer-4-base">
+            <div class="base-card">
+                <div class="base-pattern"></div>
+                <!-- 金角裝飾 -->
+                <div class="corner-deco tl"></div>
+                <div class="corner-deco tr"></div>
+                <div class="corner-deco bl"></div>
+                <div class="corner-deco br"></div>
+                <div class="border-deco"></div>
+            </div>
+        </div>
+
+        <!-- 第三層: 寶相花與金元寶 -->
+        <div class="layer layer-3-decor">
+            <!-- 頂部寶相花紋 (裝飾性線條) -->
+            <svg class="svg-icon flower-top" viewBox="0 0 200 100">
+                <path d="M100 80 Q60 80 40 50 Q20 20 10 30 Q0 40 10 60 Q30 90 100 90 Q170 90 190 60 Q200 40 190 30 Q180 20 160 50 Q140 80 100 80" fill="none" stroke="url(#goldGrad)" stroke-width="3" />
+                <path d="M100 70 Q130 30 100 10 Q70 30 100 70" fill="#a30000" stroke="#ffd700" stroke-width="2"/>
+                <circle cx="100" cy="40" r="5" fill="#ffd700" />
+                <defs>
+                    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#bf953f;stop-opacity:1" />
+                        <stop offset="50%" style="stop-color:#fcf6ba;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#bf953f;stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
+            <!-- 左下寶相花 -->
+            <svg class="svg-icon flower-bl" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#ffd700" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>
+                <path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" fill="url(#goldGrad)"/>
+                <circle cx="50" cy="50" r="10" fill="#a30000"/>
+            </svg>
             
-            <div class="shine"></div>
+            <!-- 實體感金元寶 (左) -->
+            <svg class="svg-icon ingot-gold-l" viewBox="0 0 100 70">
+                <defs>
+                    <linearGradient id="ingotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#fff5c3"/>
+                        <stop offset="30%" stop-color="#ffd700"/>
+                        <stop offset="100%" stop-color="#aa771c"/>
+                    </linearGradient>
+                </defs>
+                <path d="M10 25 Q50 65 90 25 L85 15 Q50 45 15 15 Z" fill="url(#ingotGrad)" stroke="#b8860b" stroke-width="1"/>
+                <ellipse cx="50" cy="20" rx="35" ry="12" fill="#fcf6ba"/>
+                <ellipse cx="50" cy="20" rx="25" ry="8" fill="#ffd700"/>
+                <path d="M50 15 L50 25" stroke="#b8860b" stroke-width="2" opacity="0.5"/>
+            </svg>
 
-            <!-- Layer 1: 背景星空 -->
-            <div class="layer deep-bg" id="starLayer"></div>
+            <!-- 實體感金元寶 (右) -->
+            <svg class="svg-icon ingot-gold-r" viewBox="0 0 100 70">
+                <path d="M10 25 Q50 65 90 25 L85 15 Q50 45 15 15 Z" fill="url(#ingotGrad)" stroke="#b8860b" stroke-width="1"/>
+                <ellipse cx="50" cy="20" rx="35" ry="12" fill="#fcf6ba"/>
+            </svg>
+        </div>
 
-            <!-- Layer 2: 旋轉紋飾 -->
-            <div class="layer back-deco">
-                <div class="deco-ring" style="width: 250px; height: 250px; border-width: 1px; opacity: 0.3;"></div>
-                <div class="deco-ring" style="width: 180px; height: 180px; border-width: 2px; opacity: 0.2; animation-direction: reverse; animation-duration: 40s;"></div>
+        <!-- 第二層: 祥雲與玉璧 -->
+        <div class="layer layer-2-pattern">
+            <div class="particles"></div> <!-- 金粉粒子 -->
+            
+            <div class="moon-gate"></div>
+            
+            <!-- 祥雲 SVG -->
+            <svg class="cloud-svg cloud-1" viewBox="0 0 100 60">
+                <path d="M10 40 Q20 20 40 30 T70 20 T90 40 H10 Z" fill="url(#goldGrad)" opacity="0.8"/>
+                <path d="M10 40 Q20 20 40 30 T70 20 T90 40" fill="none" stroke="#ffd700" stroke-width="2"/>
+            </svg>
+            <svg class="cloud-svg cloud-2" viewBox="0 0 100 60">
+                <path d="M10 40 Q20 20 40 30 T70 20 T90 40 H10 Z" fill="url(#goldGrad)" opacity="0.6"/>
+            </svg>
+        </div>
+
+        <!-- 第一層: 核心 (成語與燿華題字) -->
+        <div class="layer layer-1-text">
+            
+            <div class="idiom-container">
+                <h1 class="idiom-text">
+                    <span class="idiom-row">馬到</span>
+                    <span class="idiom-row">成功</span>
+                </h1>
             </div>
 
-            <!-- Layer 3: 主文字 -->
-            <div class="layer text">
-                <div class="greeting-container">
-                    <h1 class="greeting-main" id="greetingText">燿華<br>新年快樂</h1>
-                    <p class="greeting-sub">Happy New Year 2025</p>
+            <div class="text-plaque">
+                <div class="seal-mark">福</div>
+                <h2 class="main-text" id="greetingText">燿華<br>新年快樂</h2>
+                <div class="sub-text-container">
+                    <div class="sub-text">Happy New Year</div>
                 </div>
             </div>
-
-            <!-- Layer 4: 懸浮金粉 -->
-            <div class="layer particles" id="particleLayer"></div>
-
-            <!-- Layer 5: 邊框與裝飾 -->
-            <div class="layer frame">
-                <div class="border-deco"></div>
-                <div class="corner tl"></div>
-                <div class="corner tr"></div>
-                <div class="corner bl"></div>
-                <div class="corner br"></div>
-                
-                <!-- 額外的印章或裝飾字 -->
-                <div style="position: absolute; top: 30px; left: 0; width: 100%; text-align: center; color: var(--primary-gold); font-size: 12px; opacity: 0.8;">★ PROSPERITY ★</div>
-            </div>
-
         </div>
+
+        <!-- 互動光澤層 -->
+        <div class="layer shine" id="shineLayer" style="z-index: 6;"></div>
+
     </div>
 
     <script>
         const cardContainer = document.getElementById('cardContainer');
-        const card = document.getElementById('card');
-        const overlay = document.getElementById('overlay');
-        const startBtn = document.getElementById('start-btn');
-        const starLayer = document.getElementById('starLayer');
-        const particleLayer = document.getElementById('particleLayer');
         const greetingText = document.getElementById('greetingText');
+        const shineLayer = document.getElementById('shineLayer');
+        const idiomText = document.querySelector('.idiom-text');
 
-        // 生成背景星星
-        for(let i=0; i<40; i++) {
-            let star = document.createElement('div');
-            star.style.position = 'absolute';
-            star.style.background = '#fff';
-            star.style.borderRadius = '50%';
-            star.style.width = Math.random() * 2 + 'px';
-            star.style.height = star.style.width;
-            star.style.top = Math.random() * 100 + '%';
-            star.style.left = Math.random() * 100 + '%';
-            star.style.opacity = Math.random() * 0.7;
-            starLayer.appendChild(star);
-        }
-
-        // 生成前景金粉 (比較大顆，離鏡頭近)
-        for(let i=0; i<15; i++) {
-            let speck = document.createElement('div');
-            speck.className = 'gold-speck';
-            let size = Math.random() * 4 + 2;
-            speck.style.width = size + 'px';
-            speck.style.height = size + 'px';
-            speck.style.top = Math.random() * 100 + '%';
-            speck.style.left = Math.random() * 100 + '%';
-            // 隨機動畫
-            speck.style.animation = `float ${Math.random() * 3 + 2}s infinite ease-in-out`;
-            speck.style.animationDelay = Math.random() * 2 + 's';
-            particleLayer.appendChild(speck);
-        }
+        // 定義層級參數 (加強景深)
+        const layers = [
+            { el: document.querySelector('.layer-1-text'), z: 120, factor: 2.0 },
+            { el: document.querySelector('.layer-2-pattern'), z: 60, factor: 1.2 },
+            { el: document.querySelector('.layer-3-decor'), z: 30, factor: 0.6 },
+            { el: document.querySelector('.layer-4-base'), z: 0, factor: 0 },
+        ];
 
         function handleMove(x, y) {
-            const maxRotate = 20;
-            
-            // 限制旋轉角度
+            const maxRotate = 20; // 稍微減少旋轉角度以保持穩重感
             let rotateX = -x; 
             let rotateY = y;
             rotateX = Math.max(-maxRotate, Math.min(maxRotate, rotateX));
             rotateY = Math.max(-maxRotate, Math.min(maxRotate, rotateY));
 
-            // 1. 卡片整體 3D 旋轉
             cardContainer.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
 
-            // 2. 動態光影效果 (Dynamic Lighting)
-            // 計算陰影偏移：光線假設來自左上方，所以陰影往相反方向跑
-            // 這裡我們讓陰影隨手機傾斜而移動，增加立體感
-            const shadowX = rotateY * 1.5; // 左右傾斜影響水平陰影
-            const shadowY = -rotateX * 1.5; // 上下傾斜影響垂直陰影
+            // 層次移動
+            layers.forEach(layer => {
+                const translateX = y * layer.factor * 1.5; 
+                const translateY = -x * layer.factor * 1.5;
+                layer.el.style.transform = `translateZ(${layer.z}px) translateX(${translateX}px) translateY(${translateY}px)`;
+            });
 
-            // 應用到文字陰影 (讓文字看起來浮起來)
-            // 注意：drop-shadow 效果比 text-shadow 更好處理透明背景
-            greetingText.style.filter = `drop-shadow(${shadowX}px ${shadowY}px 4px rgba(0,0,0,0.6))`;
-
-            // 應用到卡片本體陰影
-            card.style.boxShadow = `
-                ${-shadowX}px ${-shadowY}px 30px rgba(0,0,0,0.5), 
-                0 0 0 2px rgba(255, 215, 0, 0.1) inset
-            `;
+            // 文字光影變化
+            const shadowX = rotateY * 1.5; 
+            const shadowY = -rotateX * 1.5; 
+            const shadowStyle = `${shadowX}px ${shadowY}px 10px rgba(0,0,0,0.6)`;
+            
+            greetingText.style.textShadow = shadowStyle;
+            idiomText.style.filter = `drop-shadow(0 4px 0px #8B4500) drop-shadow(${shadowX}px ${shadowY}px 15px rgba(0,0,0,0.6))`;
+            
+            // 全局光澤流動
+            // 計算角度對應的光澤位置
+            const bgX = 50 + (y * 2);
+            const bgY = 50 + (x * 2);
+            shineLayer.style.background = `radial-gradient(circle at ${bgX}% ${bgY}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)`;
+            shineLayer.style.opacity = 1;
         }
 
-        // PC 預覽
+        // 滑鼠互動
         document.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth - 0.5) * 2;
-            const y = (e.clientY / window.innerHeight - 0.5) * 2;
-            handleMove(y * 20, x * 20);
+            const x = (e.clientX / window.innerWidth - 0.5) * 2; 
+            const y = (e.clientY / window.innerHeight - 0.5) * 2; 
+            handleMove(y * 15, x * 15);
         });
 
-        // 手機感應器
+        // 重力感應初始化 (移除按鈕觸發)
         function initSensor() {
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.remove(), 500);
-
-            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                        } else {
-                            alert('需要權限才能展現華麗特效喔！');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
+            if (window.DeviceOrientationEvent) {
                 window.addEventListener('deviceorientation', handleOrientation);
             }
         }
 
         function handleOrientation(event) {
-            let x = event.beta; 
-            let y = event.gamma;
-
-            // 校正與限制
+            let x = event.beta;  // 前後傾斜 [-180, 180]
+            let y = event.gamma; // 左右傾斜 [-90, 90]
+            
+            // 限制角度範圍以免翻轉過度
             if (x > 90) x = 90;
             if (x < -90) x = -90;
             
-            // 調整靈敏度
-            handleMove(x - 45, y); 
+            // 手機通常是拿在手上約45度角，所以我們減去45做校正
+            if (x !== null && y !== null) {
+                handleMove(x - 45, y); 
+            }
         }
 
-        startBtn.addEventListener('click', initSensor);
-        
-        if(!/Mobi|Android/i.test(navigator.userAgent)) {
-            startBtn.innerHTML = "預覽效果 (請移動滑鼠)";
-        }
+        // 頁面載入即啟動
+        window.onload = initSensor;
+
     </script>
 </body>
 </html>
