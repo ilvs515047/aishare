@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 重力感應賀卡</title>
+    <title>3D 重力感應賀卡 - 燿華新年</title>
     <style>
         :root {
-            --card-width: 300px;
-            --card-height: 450px;
-            --primary-color: #ffd700; /* 金色 */
-            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            --card-width: 320px;
+            --card-height: 480px;
+            --primary-gold: #ffd700;
+            --secondary-gold: #cfb53b;
+            /* 華麗的深紅至暗夜黑漸層 */
+            --bg-gradient: linear-gradient(135deg, #4a0404 0%, #200101 50%, #000000 100%);
         }
 
         body {
@@ -20,50 +22,42 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background-color: #0f0f1a;
+            background-color: #050505;
+            background-image: radial-gradient(circle at center, #1a0505 0%, #000 100%);
             font-family: 'Noto Serif TC', serif;
             overflow: hidden;
-            perspective: 1000px; /* 3D 視角的關鍵 */
+            perspective: 1200px; /* 視角拉遠一點，讓層次感更明顯 */
         }
 
-        /* 權限按鈕遮罩 (iOS 需要) */
+        /* 權限按鈕遮罩 */
         #overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0,0,0,0.9);
             z-index: 9999;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            color: white;
+            color: var(--primary-gold);
             text-align: center;
             transition: opacity 0.5s;
         }
 
-        #overlay h2 {
-            margin-bottom: 20px;
-            font-weight: normal;
-        }
-
         #start-btn {
-            padding: 15px 30px;
-            background: var(--primary-color);
-            color: #1a1a2e;
+            padding: 15px 40px;
+            background: linear-gradient(45deg, var(--secondary-gold), var(--primary-gold));
+            color: #2b0a0a;
             border: none;
-            border-radius: 30px;
+            border-radius: 50px;
             font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-            transition: transform 0.2s;
-        }
-
-        #start-btn:active {
-            transform: scale(0.95);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+            margin-top: 20px;
         }
 
         /* 卡片容器 */
@@ -71,8 +65,8 @@
             width: var(--card-width);
             height: var(--card-height);
             position: relative;
-            transform-style: preserve-3d; /* 讓子元素保持 3D 空間 */
-            transition: transform 0.1s ease-out; /* 平滑過渡 */
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
         }
 
         /* 卡片本體 */
@@ -82,13 +76,14 @@
             position: absolute;
             background: var(--bg-gradient);
             border-radius: 20px;
+            /* 多重陰影增加厚度感 */
             box-shadow: 
-                0 30px 60px rgba(0,0,0,0.5), 
-                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+                0 30px 50px rgba(0,0,0,0.8), 
+                0 0 0 2px rgba(255, 215, 0, 0.1) inset;
             transform-style: preserve-3d;
         }
 
-        /* 裝飾層 - 通用樣式 */
+        /* 通用層級設定 */
         .layer {
             position: absolute;
             top: 0;
@@ -103,56 +98,111 @@
             pointer-events: none;
         }
 
-        /* 背景層 (最遠) */
-        .layer.bg {
-            transform: translateZ(-50px) scale(0.9);
+        /* --- 各層詳細設定 (Z軸深度不同) --- */
+
+        /* 1. 深背景層：星光與遠景 */
+        .layer.deep-bg {
+            transform: translateZ(-60px) scale(0.9);
+            opacity: 0.6;
+        }
+
+        /* 2. 背景裝飾層：幾何圖形 */
+        .layer.back-deco {
+            transform: translateZ(-30px);
+        }
+        
+        .deco-ring {
+            position: absolute;
+            border: 1px dashed rgba(255, 215, 0, 0.2);
+            border-radius: 50%;
+            animation: spin 60s linear infinite;
+        }
+
+        /* 3. 文字層：主要訊息 */
+        .layer.text {
+            transform: translateZ(40px);
+            z-index: 10;
+        }
+
+        .greeting-container {
+            text-align: center;
+            /* 文字邊框光暈 */
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 215, 0, 0.1);
+            backdrop-filter: blur(2px);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .greeting-main {
+            font-size: 3.2rem;
+            margin: 0;
+            font-weight: 900;
+            line-height: 1.2;
+            /* 燙金字體效果 */
+            background: linear-gradient(to bottom, #fff5c3 0%, #dbb055 40%, #a07218 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* 備用陰影 */
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+        }
+
+        .greeting-sub {
+            color: #e0e0e0;
+            font-size: 1rem;
+            margin-top: 15px;
+            letter-spacing: 4px;
+            font-family: sans-serif;
+            text-transform: uppercase;
+        }
+
+        /* 4. 懸浮層：金粉與碎片 */
+        .layer.particles {
+            transform: translateZ(80px);
+        }
+
+        .gold-speck {
+            position: absolute;
+            background: var(--primary-gold);
+            border-radius: 50%;
+            box-shadow: 0 0 5px var(--primary-gold);
             opacity: 0.8;
         }
 
-        .star {
+        /* 5. 外框層：最上層裝飾 */
+        .layer.frame {
+            transform: translateZ(100px);
+            pointer-events: none;
+        }
+
+        .border-deco {
             position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: twinkle 2s infinite ease-in-out;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
         }
-
-        /* 中景層 (文字) */
-        .layer.mid {
-            transform: translateZ(30px);
+        
+        .corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: var(--primary-gold);
+            border-style: solid;
+            transition: all 0.3s;
         }
+        
+        /* 四角裝飾 */
+        .corner.tl { top: 15px; left: 15px; border-width: 3px 0 0 3px; border-radius: 10px 0 0 0; }
+        .corner.tr { top: 15px; right: 15px; border-width: 3px 3px 0 0; border-radius: 0 10px 0 0; }
+        .corner.bl { bottom: 15px; left: 15px; border-width: 0 0 3px 3px; border-radius: 0 0 0 10px; }
+        .corner.br { bottom: 15px; right: 15px; border-width: 0 3px 3px 0; border-radius: 0 0 10px 0; }
 
-        .greeting {
-            color: var(--primary-color);
-            font-size: 3rem;
-            margin: 0;
-            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            font-weight: bold;
-            letter-spacing: 5px;
-            text-align: center;
-        }
-
-        .sub-greeting {
-            color: #fff;
-            font-size: 1.2rem;
-            margin-top: 10px;
-            letter-spacing: 2px;
-            opacity: 0.9;
-        }
-
-        /* 前景層 (裝飾框與漂浮物) */
-        .layer.front {
-            transform: translateZ(80px);
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 15px;
-            box-sizing: border-box;
-            width: 90%;
-            height: 90%;
-            top: 5%;
-            left: 5%;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
-        }
-
-        /* 光澤層 (模擬反光) */
+        /* 光澤層 */
         .shine {
             position: absolute;
             top: 0;
@@ -160,176 +210,187 @@
             width: 100%;
             height: 100%;
             background: linear-gradient(
-                135deg,
-                rgba(255,255,255,0) 0%,
-                rgba(255,255,255,0.1) 40%,
-                rgba(255,255,255,0) 100%
+                120deg,
+                rgba(255,255,255,0) 30%,
+                rgba(255,255,255,0.15) 50%,
+                rgba(255,255,255,0) 70%
             );
-            border-radius: 20px;
-            transform: translateZ(1px); /* 貼在卡片表面 */
-            z-index: 10;
+            transform: translateZ(1px);
+            z-index: 20;
+            mix-blend-mode: overlay;
         }
 
-        /* 動畫 */
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
-        /* 裝飾圖形 */
-        .circle-deco {
-            position: absolute;
-            border-radius: 50%;
-            border: 1px solid rgba(255, 215, 0, 0.2);
-        }
     </style>
 </head>
 <body>
 
-    <!-- iOS 權限遮罩 -->
     <div id="overlay">
-        <h2>✨ 3D 電子賀卡 ✨</h2>
-        <p style="margin-bottom: 30px; opacity: 0.8; font-size: 0.9rem;">
-            晃動手機以體驗立體視角<br>
-            (iOS 用戶請點擊按鈕授權感應器)
-        </p>
+        <h2>✨ 華麗 3D 新年賀卡 ✨</h2>
+        <p>晃動手機體驗視差立體效果</p>
         <button id="start-btn">開啟賀卡</button>
     </div>
 
-    <!-- 卡片主體 -->
     <div class="card-container" id="cardContainer">
-        <div class="card">
+        <div class="card" id="card">
             
-            <!-- 反光層 -->
             <div class="shine"></div>
 
-            <!-- 背景層：星星 -->
-            <div class="layer bg" id="starLayer">
-                <!-- 星星會由 JS 動態生成 -->
+            <!-- Layer 1: 背景星空 -->
+            <div class="layer deep-bg" id="starLayer"></div>
+
+            <!-- Layer 2: 旋轉紋飾 -->
+            <div class="layer back-deco">
+                <div class="deco-ring" style="width: 250px; height: 250px; border-width: 1px; opacity: 0.3;"></div>
+                <div class="deco-ring" style="width: 180px; height: 180px; border-width: 2px; opacity: 0.2; animation-direction: reverse; animation-duration: 40s;"></div>
             </div>
 
-            <!-- 裝飾圓圈 (位於背景和文字之間) -->
-            <div class="layer" style="transform: translateZ(0px);">
-                <div class="circle-deco" style="width: 200px; height: 200px; top: -50px; right: -50px;"></div>
-                <div class="circle-deco" style="width: 100px; height: 100px; bottom: 20px; left: 20px; border-color: rgba(255,255,255,0.1);"></div>
+            <!-- Layer 3: 主文字 -->
+            <div class="layer text">
+                <div class="greeting-container">
+                    <h1 class="greeting-main" id="greetingText">燿華<br>新年快樂</h1>
+                    <p class="greeting-sub">Happy New Year 2025</p>
+                </div>
             </div>
 
-            <!-- 中景層：文字內容 -->
-            <div class="layer mid">
-                <h1 class="greeting">平安<br>喜樂</h1>
-                <p class="sub-greeting">Best Wishes For You</p>
+            <!-- Layer 4: 懸浮金粉 -->
+            <div class="layer particles" id="particleLayer"></div>
+
+            <!-- Layer 5: 邊框與裝飾 -->
+            <div class="layer frame">
+                <div class="border-deco"></div>
+                <div class="corner tl"></div>
+                <div class="corner tr"></div>
+                <div class="corner bl"></div>
+                <div class="corner br"></div>
+                
+                <!-- 額外的印章或裝飾字 -->
+                <div style="position: absolute; top: 30px; left: 0; width: 100%; text-align: center; color: var(--primary-gold); font-size: 12px; opacity: 0.8;">★ PROSPERITY ★</div>
             </div>
 
-            <!-- 前景層：邊框與懸浮裝飾 -->
-            <div class="layer front">
-                <!-- 這裡可以放更多前景圖片或 SVG -->
-                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 20px; color: gold;">✦</div>
-                <div style="position: absolute; top: 10px; left: 10px; font-size: 20px; color: gold;">✦</div>
-            </div>
         </div>
     </div>
 
     <script>
         const cardContainer = document.getElementById('cardContainer');
+        const card = document.getElementById('card');
         const overlay = document.getElementById('overlay');
         const startBtn = document.getElementById('start-btn');
         const starLayer = document.getElementById('starLayer');
+        const particleLayer = document.getElementById('particleLayer');
+        const greetingText = document.getElementById('greetingText');
 
         // 生成背景星星
-        for(let i=0; i<30; i++) {
+        for(let i=0; i<40; i++) {
             let star = document.createElement('div');
-            star.className = 'star';
-            star.style.width = Math.random() * 3 + 'px';
+            star.style.position = 'absolute';
+            star.style.background = '#fff';
+            star.style.borderRadius = '50%';
+            star.style.width = Math.random() * 2 + 'px';
             star.style.height = star.style.width;
             star.style.top = Math.random() * 100 + '%';
             star.style.left = Math.random() * 100 + '%';
-            star.style.animationDelay = Math.random() * 2 + 's';
+            star.style.opacity = Math.random() * 0.7;
             starLayer.appendChild(star);
         }
 
-        // 處理視角移動的核心函數
-        function handleMove(x, y) {
-            // 限制最大旋轉角度，避免翻轉過度
-            const maxRotate = 25; 
-            
-            // 將輸入值限制在範圍內並反轉係數以符合自然視角
-            // x (Beta) 控制 X 軸旋轉 (上下傾斜)
-            // y (Gamma) 控制 Y 軸旋轉 (左右傾斜)
-            
-            let rotateX = -x; // 根據習慣可能需要正負反轉
-            let rotateY = y;
+        // 生成前景金粉 (比較大顆，離鏡頭近)
+        for(let i=0; i<15; i++) {
+            let speck = document.createElement('div');
+            speck.className = 'gold-speck';
+            let size = Math.random() * 4 + 2;
+            speck.style.width = size + 'px';
+            speck.style.height = size + 'px';
+            speck.style.top = Math.random() * 100 + '%';
+            speck.style.left = Math.random() * 100 + '%';
+            // 隨機動畫
+            speck.style.animation = `float ${Math.random() * 3 + 2}s infinite ease-in-out`;
+            speck.style.animationDelay = Math.random() * 2 + 's';
+            particleLayer.appendChild(speck);
+        }
 
-            // 限制數值範圍
+        function handleMove(x, y) {
+            const maxRotate = 20;
+            
+            // 限制旋轉角度
+            let rotateX = -x; 
+            let rotateY = y;
             rotateX = Math.max(-maxRotate, Math.min(maxRotate, rotateX));
             rotateY = Math.max(-maxRotate, Math.min(maxRotate, rotateY));
 
-            // 套用 CSS 變形
+            // 1. 卡片整體 3D 旋轉
             cardContainer.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+
+            // 2. 動態光影效果 (Dynamic Lighting)
+            // 計算陰影偏移：光線假設來自左上方，所以陰影往相反方向跑
+            // 這裡我們讓陰影隨手機傾斜而移動，增加立體感
+            const shadowX = rotateY * 1.5; // 左右傾斜影響水平陰影
+            const shadowY = -rotateX * 1.5; // 上下傾斜影響垂直陰影
+
+            // 應用到文字陰影 (讓文字看起來浮起來)
+            // 注意：drop-shadow 效果比 text-shadow 更好處理透明背景
+            greetingText.style.filter = `drop-shadow(${shadowX}px ${shadowY}px 4px rgba(0,0,0,0.6))`;
+
+            // 應用到卡片本體陰影
+            card.style.boxShadow = `
+                ${-shadowX}px ${-shadowY}px 30px rgba(0,0,0,0.5), 
+                0 0 0 2px rgba(255, 215, 0, 0.1) inset
+            `;
         }
 
-        // 1. 電腦版滑鼠事件 (測試用)
+        // PC 預覽
         document.addEventListener('mousemove', (e) => {
-            // 計算滑鼠相對於螢幕中心的百分比 (-1 到 1)
             const x = (e.clientX / window.innerWidth - 0.5) * 2;
             const y = (e.clientY / window.innerHeight - 0.5) * 2;
-            
-            // 轉換成角度 (電腦版靈敏度調低一點)
             handleMove(y * 20, x * 20);
         });
 
-        // 2. 手機版重力感應初始化
+        // 手機感應器
         function initSensor() {
-            // 隱藏遮罩
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 500);
 
-            // 檢查是否是 iOS 13+ 需要權限
             if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
                         if (permissionState === 'granted') {
                             window.addEventListener('deviceorientation', handleOrientation);
                         } else {
-                            alert('需要感應器權限才能顯示 3D 效果喔！');
+                            alert('需要權限才能展現華麗特效喔！');
                         }
                     })
                     .catch(console.error);
             } else {
-                // 非 iOS 13+ 或 Android，直接監聽
                 window.addEventListener('deviceorientation', handleOrientation);
             }
         }
 
-        // 處理重力感應數據
         function handleOrientation(event) {
-            // beta: 前後傾斜 (-180 到 180)
-            // gamma: 左右傾斜 (-90 到 90)
             let x = event.beta; 
             let y = event.gamma;
 
-            // 校正起始角度 (因為拿起手機時通常是傾斜的)
-            // 這裡做簡單處理：假設使用者以 45 度角拿著手機
+            // 校正與限制
             if (x > 90) x = 90;
             if (x < -90) x = -90;
             
-            // 這裡將 beta 減去一個基礎值(例如 45度)，讓直立觀看時較為正中
-            // 但為了通用性，直接使用相對值，限制在 -30 ~ 30 範圍內視覺效果較好
-            
-            // 將數據平滑化或限制範圍
-            // 我們希望當手機平放或直立時有些微動態
-            // 這裡簡單將 gamma 映射到 Y 軸旋轉，beta 映射到 X 軸
-            
+            // 調整靈敏度
             handleMove(x - 45, y); 
         }
 
-        // 點擊按鈕開始
         startBtn.addEventListener('click', initSensor);
-
-        // 如果是電腦瀏覽，也可以點擊關閉遮罩
+        
         if(!/Mobi|Android/i.test(navigator.userAgent)) {
-            startBtn.innerHTML = "預覽效果 (滑鼠移動)";
+            startBtn.innerHTML = "預覽效果 (請移動滑鼠)";
         }
-
     </script>
 </body>
 </html>
