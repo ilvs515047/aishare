@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D 重力感應賀卡 - 燿華新年 (馬到成功版)</title>
-    <!-- 引入古典書法字體 -->
+    <title>燿華新年賀卡</title>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -194,7 +193,7 @@
         .idiom-text {
             font-family: 'Ma Shan Zheng', cursive;
             font-size: 5rem; 
-            line-height: 1.2;
+            line-height: 1.1;
             margin: 0;
             text-align: center;
             letter-spacing: 5px;
@@ -202,6 +201,12 @@
             flex-direction: column;
             position: relative;
             transform-style: preserve-3d;
+        }
+
+        /* 新增：確保立體字之間有足夠空間，避免厚度增加時互卡 */
+        .idiom-row {
+            display: block;
+            margin-bottom: 15px; 
         }
         
         /* 立體文字樣式 
@@ -339,11 +344,9 @@
 
     <div class="card-container" id="cardContainer">
         
-        <!-- 第四層: 琉璃紅底 + 回紋 -->
         <div class="layer layer-4-base">
             <div class="base-card">
                 <div class="base-pattern"></div>
-                <!-- 金角裝飾 -->
                 <div class="corner-deco tl"></div>
                 <div class="corner-deco tr"></div>
                 <div class="corner-deco bl"></div>
@@ -352,9 +355,7 @@
             </div>
         </div>
 
-        <!-- 第三層: 裝飾 (寶相花與金元寶) -->
         <div class="layer layer-3-decor">
-            <!-- 頂部寶相花紋 (裝飾性線條) -->
             <svg class="svg-icon flower-top" viewBox="0 0 200 100">
                 <path d="M100 80 Q60 80 40 50 Q20 20 10 30 Q0 40 10 60 Q30 90 100 90 Q170 90 190 60 Q200 40 190 30 Q180 20 160 50 Q140 80 100 80" fill="none" stroke="url(#goldGrad)" stroke-width="3" />
                 <path d="M100 70 Q130 30 100 10 Q70 30 100 70" fill="#a30000" stroke="#ffd700" stroke-width="2"/>
@@ -368,14 +369,12 @@
                 </defs>
             </svg>
 
-            <!-- 左下寶相花 -->
             <svg class="svg-icon flower-bl" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="#ffd700" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>
                 <path d="M50 10 L60 40 L90 50 L60 60 L50 90 L40 60 L10 50 L40 40 Z" fill="url(#goldGrad)"/>
                 <circle cx="50" cy="50" r="10" fill="#a30000"/>
             </svg>
             
-            <!-- 實體感金元寶 (左) -->
             <svg class="svg-icon ingot-gold-l" viewBox="0 0 100 70">
                 <defs>
                     <linearGradient id="ingotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -390,20 +389,15 @@
                 <path d="M50 15 L50 25" stroke="#b8860b" stroke-width="2" opacity="0.5"/>
             </svg>
 
-            <!-- 實體感金元寶 (右) -->
             <svg class="svg-icon ingot-gold-r" viewBox="0 0 100 70">
                 <path d="M10 25 Q50 65 90 25 L85 15 Q50 45 15 15 Z" fill="url(#ingotGrad)" stroke="#b8860b" stroke-width="1"/>
                 <ellipse cx="50" cy="20" rx="35" ry="12" fill="#fcf6ba"/>
             </svg>
         </div>
 
-        <!-- 第二層: 祥雲與玉璧 -->
         <div class="layer layer-2-pattern">
-            <div class="particles"></div> <!-- 金粉粒子 -->
+            <div class="particles"></div> <div class="moon-gate"></div>
             
-            <div class="moon-gate"></div>
-            
-            <!-- 祥雲 SVG -->
             <svg class="cloud-svg cloud-1" viewBox="0 0 100 60">
                 <path d="M10 40 Q20 20 40 30 T70 20 T90 40 H10 Z" fill="url(#goldGrad)" opacity="0.8"/>
                 <path d="M10 40 Q20 20 40 30 T70 20 T90 40" fill="none" stroke="#ffd700" stroke-width="2"/>
@@ -413,13 +407,12 @@
             </svg>
         </div>
 
-        <!-- 第一層: 核心 (成語與燿華題字) -->
         <div class="layer layer-1-text">
             
             <div class="idiom-container">
                 <div class="idiom-text">
-                    <span class="idiom-row to-3d" data-depth="6">馬到</span>
-                    <span class="idiom-row to-3d" data-depth="6">成功</span>
+                    <span class="idiom-row to-3d" data-depth="8" data-step="4">馬到</span>
+                    <span class="idiom-row to-3d" data-depth="8" data-step="4">成功</span>
                 </div>
             </div>
 
@@ -432,7 +425,6 @@
             </div>
         </div>
 
-        <!-- 互動光澤層 -->
         <div class="layer shine" id="shineLayer" style="z-index: 6;"></div>
 
     </div>
@@ -449,20 +441,23 @@
             { el: document.querySelector('.layer-4-base'), z: 0, factor: 0 },
         ];
 
-        // 3D 文字生成函數
+        // 3D 文字生成函數 (修改版：支援 data-step 控制厚度)
         function create3DText() {
             const elements = document.querySelectorAll('.to-3d');
             
             elements.forEach(el => {
                 const text = el.innerHTML; // 獲取原始文字/HTML
+                // 讀取設定，若無則使用預設值
                 const depth = parseInt(el.getAttribute('data-depth')) || 5; // 層數
-                const step = 1.5; // 每層的距離 px
+                const step = parseFloat(el.getAttribute('data-step')) || 1.5; // 每層距離 px
                 
                 let layersHTML = '';
                 
                 // 生成背面/側面層 (深色)
                 for (let i = depth; i > 0; i--) {
-                    layersHTML += `<span class="text-layer" style="transform: translateZ(-${i * step}px); text-shadow: -1px -1px 2px rgba(0,0,0,0.5);">${text}</span>`;
+                    // 根據 step 大小微調陰影，讓厚字更自然
+                    const shadowOffset = step > 2 ? 1.5 : 1;
+                    layersHTML += `<span class="text-layer" style="transform: translateZ(-${i * step}px); text-shadow: -${shadowOffset}px -${shadowOffset}px ${shadowOffset*2}px rgba(0,0,0,0.6);">${text}</span>`;
                 }
                 
                 // 生成正面層 (亮金色)
@@ -492,11 +487,6 @@
                 layer.el.style.transform = `translateZ(${layer.z}px) translateX(${translateX}px) translateY(${translateY}px)`;
             });
 
-            // 更新 3D 文字的陰影方向，讓它看起來更真實
-            // 這裡不再使用 text-shadow 做主要立體感，而是用來增強最底層的陰影
-            const shadowX = rotateY * 2; 
-            const shadowY = -rotateX * 2;
-            
             // 全局光澤流動
             const bgX = 50 + (y * 2);
             const bgY = 50 + (x * 2);
