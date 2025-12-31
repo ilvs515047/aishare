@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D 重力感應賀卡</title>
+    <style>
+        :root {
+            --card-width: 300px;
+            --card-height: 450px;
+            --primary-color: #ffd700; /* 金色 */
+            --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0f0f1a;
+            font-family: 'Noto Serif TC', serif;
+            overflow: hidden;
+            perspective: 1000px; /* 3D 視角的關鍵 */
+        }
+
+        /* 權限按鈕遮罩 (iOS 需要) */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            transition: opacity 0.5s;
+        }
+
+        #overlay h2 {
+            margin-bottom: 20px;
+            font-weight: normal;
+        }
+
+        #start-btn {
+            padding: 15px 30px;
+            background: var(--primary-color);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            transition: transform 0.2s;
+        }
+
+        #start-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* 卡片容器 */
+        .card-container {
+            width: var(--card-width);
+            height: var(--card-height);
+            position: relative;
+            transform-style: preserve-3d; /* 讓子元素保持 3D 空間 */
+            transition: transform 0.1s ease-out; /* 平滑過渡 */
+        }
+
+        /* 卡片本體 */
+        .card {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: var(--bg-gradient);
+            border-radius: 20px;
+            box-shadow: 
+                0 30px 60px rgba(0,0,0,0.5), 
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            transform-style: preserve-3d;
+        }
+
+        /* 裝飾層 - 通用樣式 */
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transform-style: preserve-3d;
+            pointer-events: none;
+        }
+
+        /* 背景層 (最遠) */
+        .layer.bg {
+            transform: translateZ(-50px) scale(0.9);
+            opacity: 0.8;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 2s infinite ease-in-out;
+        }
+
+        /* 中景層 (文字) */
+        .layer.mid {
+            transform: translateZ(30px);
+        }
+
+        .greeting {
+            color: var(--primary-color);
+            font-size: 3rem;
+            margin: 0;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-align: center;
+        }
+
+        .sub-greeting {
+            color: #fff;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            letter-spacing: 2px;
+            opacity: 0.9;
+        }
+
+        /* 前景層 (裝飾框與漂浮物) */
+        .layer.front {
+            transform: translateZ(80px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            box-sizing: border-box;
+            width: 90%;
+            height: 90%;
+            top: 5%;
+            left: 5%;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.1);
+        }
+
+        /* 光澤層 (模擬反光) */
+        .shine {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                135deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.1) 40%,
+                rgba(255,255,255,0) 100%
+            );
+            border-radius: 20px;
+            transform: translateZ(1px); /* 貼在卡片表面 */
+            z-index: 10;
+        }
+
+        /* 動畫 */
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 裝飾圖形 */
+        .circle-deco {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- iOS 權限遮罩 -->
+    <div id="overlay">
+        <h2>✨ 3D 電子賀卡 ✨</h2>
+        <p style="margin-bottom: 30px; opacity: 0.8; font-size: 0.9rem;">
+            晃動手機以體驗立體視角<br>
+            (iOS 用戶請點擊按鈕授權感應器)
+        </p>
+        <button id="start-btn">開啟賀卡</button>
+    </div>
+
+    <!-- 卡片主體 -->
+    <div class="card-container" id="cardContainer">
+        <div class="card">
+            
+            <!-- 反光層 -->
+            <div class="shine"></div>
+
+            <!-- 背景層：星星 -->
+            <div class="layer bg" id="starLayer">
+                <!-- 星星會由 JS 動態生成 -->
+            </div>
+
+            <!-- 裝飾圓圈 (位於背景和文字之間) -->
+            <div class="layer" style="transform: translateZ(0px);">
+                <div class="circle-deco" style="width: 200px; height: 200px; top: -50px; right: -50px;"></div>
+                <div class="circle-deco" style="width: 100px; height: 100px; bottom: 20px; left: 20px; border-color: rgba(255,255,255,0.1);"></div>
+            </div>
+
+            <!-- 中景層：文字內容 -->
+            <div class="layer mid">
+                <h1 class="greeting">平安<br>喜樂</h1>
+                <p class="sub-greeting">Best Wishes For You</p>
+            </div>
+
+            <!-- 前景層：邊框與懸浮裝飾 -->
+            <div class="layer front">
+                <!-- 這裡可以放更多前景圖片或 SVG -->
+                <div style="position: absolute; bottom: 10px; right: 10px; font-size: 20px; color: gold;">✦</div>
+                <div style="position: absolute; top: 10px; left: 10px; font-size: 20px; color: gold;">✦</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cardContainer = document.getElementById('cardContainer');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const starLayer = document.getElementById('starLayer');
+
+        // 生成背景星星
+        for(let i=0; i<30; i++) {
+            let star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.top = Math.random() * 100 + '%';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 2 + 's';
+            starLayer.appendChild(star);
+        }
+
+        // 處理視角移動的核心函數
+        function handleMove(x, y) {
+            // 限制最大旋轉角度，避免翻轉過度
+            const maxRotate = 25; 
+            
+            // 將輸入值限制在範圍內並反轉係數以符合自然視角
+            // x (Beta) 控制 X 軸旋轉 (上下傾斜)
+            // y (Gamma) 控制 Y 軸旋轉 (左右傾斜)
+            
+            let rotateX = -x; // 根據習慣可能需要正負反轉
+            let rotateY = y;
+
+            // 限制數值範圍
+            rotateX = Math.max(-maxRotate, Math.min(maxRotate, rotateX));
+            rotateY = Math.max(-maxRotate, Math.min(maxRotate, rotateY));
+
+            // 套用 CSS 變形
+            cardContainer.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        }
+
+        // 1. 電腦版滑鼠事件 (測試用)
+        document.addEventListener('mousemove', (e) => {
+            // 計算滑鼠相對於螢幕中心的百分比 (-1 到 1)
+            const x = (e.clientX / window.innerWidth - 0.5) * 2;
+            const y = (e.clientY / window.innerHeight - 0.5) * 2;
+            
+            // 轉換成角度 (電腦版靈敏度調低一點)
+            handleMove(y * 20, x * 20);
+        });
+
+        // 2. 手機版重力感應初始化
+        function initSensor() {
+            // 隱藏遮罩
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+
+            // 檢查是否是 iOS 13+ 需要權限
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                        } else {
+                            alert('需要感應器權限才能顯示 3D 效果喔！');
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                // 非 iOS 13+ 或 Android，直接監聽
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        // 處理重力感應數據
+        function handleOrientation(event) {
+            // beta: 前後傾斜 (-180 到 180)
+            // gamma: 左右傾斜 (-90 到 90)
+            let x = event.beta; 
+            let y = event.gamma;
+
+            // 校正起始角度 (因為拿起手機時通常是傾斜的)
+            // 這裡做簡單處理：假設使用者以 45 度角拿著手機
+            if (x > 90) x = 90;
+            if (x < -90) x = -90;
+            
+            // 這裡將 beta 減去一個基礎值(例如 45度)，讓直立觀看時較為正中
+            // 但為了通用性，直接使用相對值，限制在 -30 ~ 30 範圍內視覺效果較好
+            
+            // 將數據平滑化或限制範圍
+            // 我們希望當手機平放或直立時有些微動態
+            // 這裡簡單將 gamma 映射到 Y 軸旋轉，beta 映射到 X 軸
+            
+            handleMove(x - 45, y); 
+        }
+
+        // 點擊按鈕開始
+        startBtn.addEventListener('click', initSensor);
+
+        // 如果是電腦瀏覽，也可以點擊關閉遮罩
+        if(!/Mobi|Android/i.test(navigator.userAgent)) {
+            startBtn.innerHTML = "預覽效果 (滑鼠移動)";
+        }
+
+    </script>
+</body>
+</html>
