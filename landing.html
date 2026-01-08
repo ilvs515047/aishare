@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>高擬真主輪降落物理模擬器</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            touch-action: none;
+        }
+
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 儀表板樣式 */
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 280px;
+            background: rgba(30, 30, 35, 0.9);
+            border-left: 4px solid #F39C12;
+            padding: 15px;
+            border-radius: 4px;
+            color: #ecf0f1;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            font-family: 'Courier New', monospace; /* 航空儀表風格 */
+        }
+
+        h2 {
+            margin: 0 0 15px 0;
+            font-size: 1rem;
+            color: #F39C12;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .data-val {
+            font-weight: bold;
+            color: #3498DB;
+        }
+
+        /* G力條 */
+        .g-meter-container {
+            margin-top: 10px;
+            background: #444;
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .g-meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2ECC71, #F1C40F, #E74C3C);
+            transition: width 0.05s linear;
+        }
+        
+        /* 標記 1G 的位置 */
+        .g-mark {
+            position: absolute;
+            left: 25%; /* 假設滿格 4G */
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #fff;
+            opacity: 0.5;
+        }
+
+        .alert-box {
+            margin-top: 10px;
+            padding: 5px;
+            text-align: center;
+            background: #C0392B;
+            color: white;
+            font-weight: bold;
+            display: none;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: #2c3e50;
+            color: #fff;
+            border: 2px solid #fff;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            z-index: 999;
+            transition: transform 0.1s;
+        }
+        
+        #start-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+
+        /* 輔助控制滑桿 (PC用) */
+        #slider-container {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 300px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+            background: rgba(255,255,255,0.5);
+            padding: 10px;
+            border-radius: 20px;
+        }
+
+        input[type=range] {
+            writing-mode: bt-lr; 
+            -webkit-appearance: slider-vertical;
+            width: 8px;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="simCanvas"></canvas>
+    
+    <div id="ui-panel">
+        <h2>Main Gear Status</h2>
+        <div class="data-row">
+            <span>STRUT EXT:</span>
+            <span id="ui-strut" class="data-val">100%</span>
+        </div>
+        <div class="data-row">
+            <span>V. SPEED:</span>
+            <span id="ui-vs" class="data-val">0</span>
+        </div>
+        <div class="data-row">
+            <span>IMPACT G:</span>
+            <span id="ui-g" class="data-val">1.0</span>
+        </div>
+        
+        <div class="g-meter-container">
+            <div class="g-mark"></div> <!-- 1G reference -->
+            <div id="ui-g-bar" class="g-meter-fill"></div>
+        </div>
+
+        <div id="ui-alert" class="alert-box">HARD LANDING</div>
+    </div>
+
+    <div id="slider-container">
+        <span style="margin-bottom:5px">▲</span>
+        <input type="range" id="debug-slider" min="0" max="100" value="50">
+        <span style="margin-top:5px">▼</span>
+    </div>
+
+    <button id="start-btn">啟動模擬 (Start)</button>
+</div>
+
+<script>
+/**
+ * 使用 IIFE (立即執行函式) 包裹程式碼，避免全域變數汙染導致的
+ * SyntaxError: Identifier 'P' has already been declared 錯誤
+ */
+(function() {
+    /**
+     * 物理引擎與渲染核心
+     */
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // UI Elements
+    const uiStrut = document.getElementById('ui-strut');
+    const uiVs = document.getElementById('ui-vs');
+    const uiG = document.getElementById('ui-g');
+    const uiGBar = document.getElementById('ui-g-bar');
+    const uiAlert = document.getElementById('ui-alert');
+    const startBtn = document.getElementById('start-btn');
+    const sliderContainer = document.getElementById('slider-container');
+    const debugSlider = document.getElementById('debug-slider');
+
+    // 狀態變數
+    let isRunning = false;
+    let width, height;
+
+    // 物理參數
+    const P = {
+        gravity: 0.6,
+        groundY: 0,           // 在 resize 中設定
+        
+        // 機身參數
+        aircraftY: 200,       // 機身結構掛載點 Y
+        targetAircraftY: 200, // 目標高度 (由輸入控制)
+        aircraftVelocity: 0,
+        
+        // 起落架參數
+        // Strut (避震器)
+        fullExtLength: 220,   // 完全伸展長度 (Top Pivot to Axle Center)
+        compressedLength: 140,// 完全壓縮長度 (金屬碰金屬)
+        currentLength: 220,   // 當前長度
+        pistonVelocity: 0,    // 避震伸縮速度
+        
+        // 彈簧與阻尼 (Oleo Strut 特性)
+        springK: 0.25,        // 氣壓彈簧係數 (隨壓縮量非線性增加會更真實，這裡簡化為線性但夠硬)
+        dampingCompression: 0.85, // 壓縮阻尼 (油孔阻力)
+        dampingRebound: 0.60,     // 回彈阻尼 (通常回彈較慢以防止彈跳)
+
+        // 輪胎 (剛體)
+        wheelRadius: 48,
+        wheelRotation: 0,
+        groundSpeed: 20,      // 模擬地面相對速度
+        
+        // 運算結果
+        gForce: 1.0,
+        isOnGround: false
+    };
+
+    // 煙霧粒子
+    let particles = [];
+
+    // 初始化
+    function init() {
+        window.addEventListener('resize', resize);
+        resize();
+        
+        startBtn.addEventListener('click', () => {
+            requestSensorAccess();
+            startBtn.style.display = 'none';
+            isRunning = true;
+            loop();
+        });
+
+        // 滑桿備用輸入
+        debugSlider.addEventListener('input', (e) => {
+            const val = 100 - e.target.value; // 0=Top, 100=Bottom
+            // 映射滑桿 0-100 到高度範圍
+            const minH = height * 0.1;
+            const maxH = P.groundY - P.compressedLength + 20; 
+            P.targetAircraftY = minH + (val / 100) * (maxH - minH);
+        });
+    }
+
+    function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+        P.groundY = height - 60; // 地面位置
+        // 重置位置
+        if(!isRunning) {
+            P.targetAircraftY = height * 0.3;
+            P.aircraftY = P.targetAircraftY;
+        }
+    }
+
+    // 請求權限
+    function requestSensorAccess() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission()
+                .then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                    } else {
+                        alert("無權限，請使用滑桿控制");
+                        sliderContainer.style.display = 'flex';
+                    }
+                })
+                .catch(e => {
+                    console.error(e);
+                    sliderContainer.style.display = 'flex';
+                });
+        } else {
+            // Android or PC
+            window.addEventListener('deviceorientation', handleOrientation);
+            // 如果 1 秒內沒收到數據，顯示滑桿
+            setTimeout(() => {
+                if(lastBeta === null) sliderContainer.style.display = 'flex';
+            }, 1000);
+        }
+    }
+
+    let lastBeta = null;
+    function handleOrientation(e) {
+        lastBeta = e.beta;
+        if(e.beta === null) return;
+        
+        // 操控邏輯：平舉手機約 30 度為基準
+        // 前傾 (<30) -> 下降
+        // 後仰 (>30) -> 上升
+        const neutral = 30;
+        const range = 40; 
+        
+        let delta = Math.max(-range, Math.min(range, e.beta - neutral));
+        let norm = (delta + range) / (range * 2); // 0.0 ~ 1.0
+        
+        // 1.0 = High (Up), 0.0 = Low (Down)
+        const minH = height * 0.1;
+        const maxH = P.groundY - P.compressedLength + 40;
+        
+        // 反轉 norm 因為 1.0 (後仰) 應該是高空 (Y值小)
+        P.targetAircraftY = maxH - norm * (maxH - minH);
+    }
+
+    // 物理循環
+    function updatePhysics() {
+        // 1. 機身運動 (平滑跟隨目標)
+        // 使用簡單的彈簧跟隨，讓操作有重量感
+        let dy = P.targetAircraftY - P.aircraftY;
+        P.aircraftVelocity += dy * 0.005;
+        P.aircraftVelocity *= 0.92; // 阻尼
+        P.aircraftY += P.aircraftVelocity;
+
+        // 2. 計算避震器物理
+        // 假設下半部組件(輪子+活塞)質量很小，主要受力是地面的硬性約束和避震彈簧力
+        
+        // 預測輪軸位置 (如果避震器完全伸展)
+        let potentialWheelY = P.aircraftY + P.fullExtLength;
+        let tireBottom = potentialWheelY + P.wheelRadius;
+        
+        let force = 0; // 避震器內力 (向上推機身)
+
+        if (tireBottom >= P.groundY) {
+            // --- 觸地狀態 ---
+            if (!P.isOnGround) {
+                P.isOnGround = true;
+                spawnSmoke(P.groundY, 15);
+            }
+
+            // 強制約束：輪子剛性，不能穿過地面
+            // 輪軸中心必須在 P.groundY - P.wheelRadius
+            let constrainedWheelY = P.groundY - P.wheelRadius;
+            
+            // 根據機身位置和被約束的輪子位置，計算避震器當前長度
+            let newLen = constrainedWheelY - P.aircraftY;
+            
+            // 限制機械行程 (Bottoming out)
+            if (newLen < P.compressedLength) {
+                newLen = P.compressedLength;
+                // 這裡是金屬撞擊，非常硬
+                // 實際上會推動機身向上，這裡簡化為 G力飆升
+                force += 50; // 硬撞擊力
+            }
+
+            // 計算壓縮速度 (用於阻尼)
+            let compressionRate = P.currentLength - newLen;
+            
+            P.currentLength = newLen;
+            
+            // 彈簧力 F = k * x (x 是壓縮量)
+            let compression = P.fullExtLength - P.currentLength;
+            force += compression * P.springK;
+            
+            // 阻尼力 F = c * v
+            if (compressionRate > 0) {
+                // 正在壓縮
+                force += compressionRate * P.dampingCompression;
+            } else {
+                // 正在回彈
+                force += compressionRate * P.dampingRebound;
+            }
+            
+            // 輪子轉動
+            P.wheelRotation += P.groundSpeed * 0.05;
+
+        } else {
+            // --- 空中狀態 ---
+            P.isOnGround = false;
+            
+            // 避震器伸展 (重力拉下活塞)
+            if (P.currentLength < P.fullExtLength) {
+                P.currentLength += 2; // 伸展速度
+                if (P.currentLength > P.fullExtLength) P.currentLength = P.fullExtLength;
+            }
+            
+            // 空中輪子阻力停轉
+            P.wheelRotation *= 0.98;
+        }
+
+        // 3. 計算 G力
+        // 基礎 1G + (避震器向上推力 / 虛擬質量)
+        // 調整係數以符合直覺顯示
+        let dynamicG = force * 0.15;
+        let totalG = 1.0 + dynamicG;
+        
+        // 平滑化
+        P.gForce = P.gForce * 0.8 + totalG * 0.2;
+
+        updateUI();
+    }
+
+    function updateUI() {
+        // 避震行程百分比
+        let range = P.fullExtLength - P.compressedLength;
+        let current = P.currentLength - P.compressedLength;
+        let pct = (current / range) * 100;
+        uiStrut.innerText = Math.max(0, Math.min(100, pct)).toFixed(0) + "%";
+        
+        // 垂直速度 (反向，向上為正通常習慣，但在這裡顯示下降率比較直觀)
+        // 取 aircraftVelocity
+        let vs = P.aircraftVelocity * 60; // px/s
+        uiVs.innerText = Math.abs(vs).toFixed(0) + (vs > 0 ? " DN" : " UP");
+        
+        // G力
+        uiG.innerText = P.gForce.toFixed(2);
+        uiG.style.color = P.gForce > 2.0 ? '#E74C3C' : '#3498DB';
+        
+        // G Bar (4G max)
+        let barW = (P.gForce / 4) * 100;
+        uiGBar.style.width = Math.min(100, barW) + "%";
+        
+        // 警告
+        if (P.gForce > 2.5) {
+            uiAlert.style.display = 'block';
+        } else {
+            uiAlert.style.display = 'none';
+        }
+    }
+
+    // 繪圖核心
+    function draw() {
+        // 背景與地面
+        ctx.clearRect(0, 0, width, height);
+        
+        // 地面
+        let gY = P.groundY;
+        // 跑道混凝土質感
+        ctx.fillStyle = '#555'; 
+        ctx.fillRect(0, gY, width, height - gY);
+        
+        // 跑道標線 (動態效果)
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, gY, width, height - gY);
+        ctx.clip();
+        
+        let speedOffset = (Date.now() / 2) % 200;
+        ctx.fillStyle = '#7f8c8d'; // 較淺的條紋
+        for(let x = -speedOffset; x < width; x+=200) {
+            ctx.fillRect(x, gY + 10, 100, 20); // 虛線
+        }
+        // 輪胎痕跡 (靜態)
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(0, gY, width, 5);
+        ctx.restore();
+
+        // 繪製起落架
+        drawRealisticGear(width/2, P.aircraftY, P.currentLength);
+        
+        // 繪製煙霧
+        drawParticles();
+        
+        // 繪製機身底部陰影
+        // 隨著高度變淡
+        let alt = P.groundY - (P.aircraftY + P.wheelRadius);
+        if (alt < 300) {
+            let alpha = 1 - (alt/300);
+            ctx.fillStyle = `rgba(0,0,0,${alpha * 0.3})`;
+            ctx.beginPath();
+            // 橢圓陰影
+            ctx.ellipse(width/2, gY, 60, 15, 0, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    /**
+     * 繪製高擬真起落架
+     * @param {number} x X座標
+     * @param {number} y 機身掛載點Y (Trunnion)
+     * @param {number} length 當前避震長度 (Pivot to Axle)
+     */
+    function drawRealisticGear(x, y, length) {
+        const angle = 0; // 垂直
+        const cylinderW = 34; // 外管寬度
+        const pistonW = 24;   // 內管寬度
+        const cylinderLen = 140; // 外管長度
+        
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // 1. 機身結構 (Trunnion / Mounting Point)
+        // 繪製一個更複雜的安裝座
+        ctx.fillStyle = '#444';
+        ctx.beginPath();
+        ctx.moveTo(-40, -20);
+        ctx.lineTo(40, -20);
+        ctx.lineTo(25, 20);
+        ctx.lineTo(-25, 20);
+        ctx.fill();
+        
+        // 斜撐桿 (Drag Brace) - 向右上方延伸
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.moveTo(10, 10);
+        ctx.lineTo(120, -100);
+        ctx.stroke();
+        // 銷釘細節
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(10, 10, 5, 0, Math.PI*2); ctx.fill();
+
+        // 2. Oleo 外管 (Main Cylinder) - 烤漆質感
+        let gradCyl = ctx.createLinearGradient(-cylinderW/2, 0, cylinderW/2, 0);
+        gradCyl.addColorStop(0, '#7f8c8d');   // 暗邊
+        gradCyl.addColorStop(0.3, '#bdc3c7'); // 亮面
+        gradCyl.addColorStop(0.5, '#ecf0f1'); // 高光
+        gradCyl.addColorStop(1, '#95a5a6');   // 暗邊
+        
+        ctx.fillStyle = gradCyl;
+        // 帶圓角的矩形
+        roundRect(ctx, -cylinderW/2, 0, cylinderW, cylinderLen, 5);
+        ctx.fill();
+        // 外管底部法蘭 (Gland Nut)
+        ctx.fillStyle = '#555';
+        ctx.fillRect(-cylinderW/2 - 2, cylinderLen - 10, cylinderW + 4, 15);
+
+        // 3. Oleo 活塞 (Piston/Strut) - 鍍鉻質感
+        // 計算活塞露出部分
+        // 總長度 = length
+        // 活塞底部 (Axle center) = length
+        // 活塞是從外管內部伸出來的
+        let pistonTop = cylinderLen;
+        let pistonLen = length - cylinderLen; // 露出的長度
+        
+        let gradPiston = ctx.createLinearGradient(-pistonW/2, 0, pistonW/2, 0);
+        gradPiston.addColorStop(0, '#bdc3c7');
+        gradPiston.addColorStop(0.4, '#fff'); // 強烈高光
+        gradPiston.addColorStop(0.6, '#bdc3c7');
+        gradPiston.addColorStop(1, '#7f8c8d');
+        
+        ctx.fillStyle = gradPiston;
+        ctx.fillRect(-pistonW/2, pistonTop - 10, pistonW, pistonLen + 10); // +10 插入外管內部以免穿幫
+
+        // 4. 扭力臂/剪式連桿 (Torque Links) - 位於後方 (右側)
+        // 上接點: 外管下部
+        // 下接點: 活塞底部/輪軸座
+        let upperPivot = { x: cylinderW/2, y: cylinderLen - 20 };
+        let lowerPivot = { x: cylinderW/2, y: length - 30 };
+        
+        // 計算膝關節 (向後突)
+        let linkDist = lowerPivot.y - upperPivot.y;
+        let linkLen = 70; // 單臂長
+        // 用畢氏定理算突出量
+        // halfDist^2 + bulge^2 = linkLen^2
+        let bulge = Math.sqrt(Math.max(0, linkLen*linkLen - (linkDist/2)*(linkDist/2)));
+        
+        let knee = { x: upperPivot.x + bulge, y: upperPivot.y + linkDist/2 };
+        
+        // 畫連桿 (多邊形)
+        drawLink(upperPivot, knee);
+        drawLink(lowerPivot, knee);
+        
+        // 畫關節銷釘
+        ctx.fillStyle = '#333';
+        [upperPivot, lowerPivot, knee].forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 5. 輪軸與輪胎
+        ctx.translate(0, length); // 移動原點到輪軸中心
+        ctx.rotate(P.wheelRotation);
+
+        // 輪胎 (剛性圓)
+        let r = P.wheelRadius;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI*2);
+        // 橡膠質感
+        let gradTire = ctx.createRadialGradient(0, 0, r*0.8, 0, 0, r);
+        gradTire.addColorStop(0, '#2c3e50');
+        gradTire.addColorStop(1, '#1a252f');
+        ctx.fillStyle = gradTire;
+        ctx.fill();
+        
+        // 胎紋 (簡單線條)
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, r-5, 0, Math.PI*2);
+        ctx.stroke();
+
+        // 輪框 (Rim)
+        let rimR = r * 0.55;
+        ctx.beginPath();
+        ctx.arc(0, 0, rimR, 0, Math.PI*2);
+        ctx.fillStyle = '#ecf0f1'; // 白色/銀色輪框
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#bdc3c7';
+        ctx.stroke();
+
+        // 煞車盤/輪轂細節
+        ctx.fillStyle = '#7f8c8d';
+        ctx.beginPath();
+        ctx.arc(0, 0, rimR * 0.6, 0, Math.PI*2);
+        ctx.fill();
+
+        // 螺絲 (Bolts)
+        ctx.fillStyle = '#333';
+        for(let i=0; i<8; i++) {
+            let rad = (i/8) * Math.PI*2;
+            let bx = Math.cos(rad) * (rimR * 0.4);
+            let by = Math.sin(rad) * (rimR * 0.4);
+            ctx.beginPath();
+            ctx.arc(bx, by, 2, 0, Math.PI*2);
+            ctx.fill();
+        }
+        
+        // 軸心蓋 (Axle Cap)
+        ctx.fillStyle = '#222';
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    function drawLink(p1, p2) {
+        // 繪製有厚度的連桿
+        let dx = p2.x - p1.x;
+        let dy = p2.y - p1.y;
+        let angle = Math.atan2(dy, dx);
+        let width = 8;
+        
+        ctx.save();
+        ctx.translate(p1.x, p1.y);
+        ctx.rotate(angle);
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        
+        // 金屬質感
+        let grad = ctx.createLinearGradient(0, -width, 0, width);
+        grad.addColorStop(0, '#95a5a6');
+        grad.addColorStop(0.5, '#ecf0f1');
+        grad.addColorStop(1, '#7f8c8d');
+        
+        ctx.fillStyle = grad;
+        // 畫一個兩端圓形的矩形
+        ctx.beginPath();
+        ctx.moveTo(0, -width/2);
+        ctx.lineTo(dist, -width/2);
+        ctx.arc(dist, 0, width/2, -Math.PI/2, Math.PI/2);
+        ctx.lineTo(0, width/2);
+        ctx.arc(0, 0, width/2, Math.PI/2, -Math.PI/2);
+        ctx.fill();
+        
+        // 鏤空減重孔 (常見於剪式連桿)
+        ctx.fillStyle = '#444';
+        ctx.beginPath();
+        ctx.arc(dist/2, 0, width/4, 0, Math.PI*2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function spawnSmoke(y, count) {
+        for(let i=0; i<count; i++) {
+            particles.push({
+                x: width/2 - 20 + Math.random()*40,
+                y: y,
+                vx: -3 - Math.random() * 4, // 輪子轉動把煙往後帶
+                vy: -1 - Math.random() * 2,
+                life: 1.0,
+                size: 5 + Math.random() * 15
+            });
+        }
+    }
+
+    function drawParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.95; // 阻力
+            p.life -= 0.02;
+            p.size += 0.3;
+
+            if (p.life <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+
+            ctx.fillStyle = `rgba(220, 220, 230, ${p.life * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+
+    function loop() {
+        if (!isRunning) return;
+        updatePhysics();
+        draw();
+    }
+
+    // 啟動
+    init();
+
+})(); // 結束 IIFE
+</script>
+</body>
+</html>
