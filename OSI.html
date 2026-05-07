@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPAS 資安工程師考前衝刺：OSI vs TCP/IP 對照表</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+        }
+        body {
+            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+            line-height: 1.6;
+            background-color: var(--light);
+            color: var(--primary);
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            border-bottom: 3px solid var(--accent);
+            padding-bottom: 10px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: var(--secondary);
+            color: white;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        .osi-7 { background-color: #ffebee; }
+        .osi-6 { background-color: #fce4ec; }
+        .osi-5 { background-color: #f3e5f5; }
+        .osi-4 { background-color: #e8eaf6; }
+        .osi-3 { background-color: #e3f2fd; }
+        .osi-2 { background-color: #e8f5e9; }
+        .osi-1 { background-color: #fffde7; }
+
+        .layer-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85em;
+            margin-bottom: 5px;
+        }
+        .tcp-ip-group {
+            border-left: 5px solid var(--accent);
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .highlight-attack { color: var(--danger); font-weight: bold; }
+        .highlight-defend { color: var(--success); font-weight: bold; }
+        
+        .tip-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffeeba;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🛡️ IPAS 資訊安全工程師：全域對照圖譜</h1>
+    
+    <div class="tip-box">
+        <strong>💡 考前必記：</strong> IPAS 題目常考「哪種攻擊發生在 OSI 哪一層」或是「WAF 與 IPS 的差異」。記住：只要看到 HTTP/DNS/SQLi，一律先想第七層！
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>TCP/IP 4層</th>
+                <th>OSI 7層模型</th>
+                <th>對應服務 / 協定</th>
+                <th>代表設備</th>
+                <th>常見攻擊</th>
+                <th>防禦手段</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="osi-7">
+                <td rowspan="3" class="tcp-ip-group">應用層<br>(Application)</td>
+                <td><b>L7 應用層</b></td>
+                <td>HTTP, HTTPS, DNS, FTP, SMTP, DHCP, <b>Kerberos</b></td>
+                <td>L7 Switch, <b>WAF</b>, 閘道器</td>
+                <td class="highlight-attack">SQLi, XSS, 憑證填充, DNS 污染</td>
+                <td class="highlight-defend">WAF, 2FA/MFA, 輸入驗證</td>
+            </tr>
+            <tr class="osi-6">
+                <td><b>L6 表現層</b></td>
+                <td>SSL, TLS, ASCII, JPEG, 加密/解密</td>
+                <td>(通常為軟體實作)</td>
+                <td class="highlight-attack">加密演算法漏洞 (如 Heartbleed)</td>
+                <td class="highlight-defend">更新加密套件, SSL Inspection</td>
+            </tr>
+            <tr class="osi-5">
+                <td><b>L5 會議層</b></td>
+                <td>RPC, NetBIOS, SQL Session</td>
+                <td>(主機作業系統)</td>
+                <td class="highlight-attack">會話劫持 (Session Hijacking)</td>
+                <td class="highlight-defend">Session Timeout, Token 隨機化</td>
+            </tr>
+            <tr class="osi-4">
+                <td class="tcp-ip-group">傳輸層<br>(Transport)</td>
+                <td><b>L4 傳輸層</b></td>
+                <td>TCP, UDP</td>
+                <td>L4 Switch, <b>狀態檢查防火牆</b></td>
+                <td class="highlight-attack">SYN Flood, Port Scan</td>
+                <td class="highlight-defend">流量清洗, 防火牆 ACL, IDS/IPS</td>
+            </tr>
+            <tr class="osi-3">
+                <td class="tcp-ip-group">網際網路層<br>(Internet)</td>
+                <td><b>L3 網路層</b></td>
+                <td>IP, ICMP, ARP (有爭議), <b>IPsec</b></td>
+                <td><b>路由器 (Router)</b>, L3 Switch</td>
+                <td class="highlight-attack">IP Spoofing, ICMP Flood (Smurf)</td>
+                <td class="highlight-defend">IPsec VPN, 路由器過濾</td>
+            </tr>
+            <tr class="osi-2">
+                <td rowspan="2" class="tcp-ip-group">網路存取層<br>(Network Access)</td>
+                <td><b>L2 資料連結層</b></td>
+                <td>Ethernet, MAC, PPP, <b>ARP</b></td>
+                <td><b>交換器 (Switch)</b>, 網橋</td>
+                <td class="highlight-attack">ARP Spoofing, MAC Flooding</td>
+                <td class="highlight-defend">Port Security, DAI (動態 ARP 檢測)</td>
+            </tr>
+            <tr class="osi-1">
+                <td><b>L1 實體層</b></td>
+                <td>Bits, 電壓, 介面規格 (RJ45)</td>
+                <td>集線器 (Hub), 中繼器, 線材</td>
+                <td class="highlight-attack">實體破壞, 訊號側錄 (Sniffing)</td>
+                <td class="highlight-defend">實體門禁, 屏蔽線材</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="tip-box" style="background-color: #d1ecf1; border-color: #bee5eb;">
+        <strong>📝 技術考點補強：</strong>
+        <ul>
+            <li><b>WAF：</b> 運作在 L7，專門處理 HTTP/HTTPS 的負載內容。</li>
+            <li><b>IPsec：</b> 運作在 L3，分為傳輸模式與穿透模式（Tunnel Mode）。</li>
+            <li><b>Kerberos：</b> L7 的認證協定，關鍵物件為 <b>TGT</b> 與 <b>Service Ticket</b>。</li>
+            <li><b>SUID：</b> Linux 權限值為 <b>4000</b>，可用於本地提權攻擊（如 Dirty COW）。</li>
+        </ul>
+    </div>
+</div>
+
+</body>
+</html>
